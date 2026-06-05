@@ -11,13 +11,15 @@ import java.sql.Statement;
 public class DataSynchronizer {
 
     // Database connection settings
-    private static final String DB_URL = "jdbc:mysql://localhost:3306/social_network";
+    private static final String DB_NAME = "SocialNetworkFriendSuggestion";
     private static final String DB_USER = "sa";
     private static final String DB_PASS = "12345";
-    private static final String FALLBACK_FILE_PATH = "data/users.txt";
+    private static final String DB_URL = "jdbc:sqlserver://localhost: 1433;databaseName=" + DB_NAME;
+    private static final String FALLBACK_FILE_PATH = "src/data/users.txt";
 
     /**
      * Main entry point called when the server starts.
+     * @param controller
      */
     public static void loadDataOnStartup(SocialNetworkController controller) {
         System.out.println("--- STARTING SERVER DATA INITIALIZATION ---");
@@ -42,16 +44,16 @@ public class DataSynchronizer {
             System.out.println("[INFO] Database connection successful. Loading data...");
 
             // Step 1.1: Load all users
-            ResultSet rsUsers = stmt.executeQuery("SELECT id, full_name FROM users");
+            ResultSet rsUsers = stmt.executeQuery("SELECT user_id, full_name FROM Users");
             while (rsUsers.next()) {
-                controller.registerUser(rsUsers.getInt("id"), rsUsers.getString("full_name"));
+                controller.registerUser(rsUsers.getInt("user_id"), rsUsers.getString("full_name"));
             }
 
             // Step 1.2: Load all relationships (edges)
-            ResultSet rsFriends = stmt.executeQuery("SELECT user_id_1, user_id_2 FROM friendships");
+            ResultSet rsFriends = stmt.executeQuery("SELECT user_id1, user_id2 FROM Friendships");
             while (rsFriends.next()) {
                 // Use the makeFriend method already implemented in the controller
-                controller.makeFriend(rsFriends.getInt("user_id_1"), rsFriends.getInt("user_id_2"));
+                controller.makeFriend(rsFriends.getInt("user_id1"), rsFriends.getInt("user_id2"));
             }
 
             return true; // Success
@@ -96,7 +98,6 @@ public class DataSynchronizer {
 
         } catch (Exception e) {
             System.err.println("[FATAL] Catastrophic error: both the database and the fallback file could not be read!");
-            e.printStackTrace();
             // In practice, if both fail, the server may have to shut down (System.exit(1))
         }
     }
