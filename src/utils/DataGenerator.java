@@ -1,4 +1,5 @@
 package utils;
+
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -9,68 +10,68 @@ import java.util.Set;
 public class DataGenerator {
 
     public static void main(String[] args) {
-        // Cấu hình số lượng bạn muốn sinh ra
-        int totalUsers = 500;    // Sinh ra 500 user
-        int totalEdges = 3000;    // Sinh ra 3000 mối quan hệ kết bạn
-        String filePath = "data/social_network_data_500.txt"; // Tên file xuất ra
+        // Configure how much sample data to generate
+        int totalUsers = 500;    // Generate 500 users
+        int totalEdges = 3000;   // Generate 3000 friendship relationships
+        String filePath = "src/data/users.txt"; // Output file path
 
         generateData(totalUsers, totalEdges, filePath);
     }
 
     public static void generateData(int totalUsers, int totalEdges, String filePath) {
         Random random = new Random();
-        // Dùng Set để chống trùng lặp mối quan hệ kết bạn
+        // Use a Set to prevent duplicate friendships
         Set<String> generatedEdges = new HashSet<>();
 
-        System.out.println("Bắt đầu sinh dữ liệu...");
+        System.out.println("Starting data generation...");
 
-        try ( BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
 
-            // PHẦN 1: GHI DANH SÁCH USER
-            writer.write(totalUsers + "\n"); // Dòng đầu tiên: Số lượng user
+            // PART 1: WRITE THE USER LIST
+            writer.write(totalUsers + "\n"); // First line: number of users
             for (int i = 1; i <= totalUsers; i++) {
-                // ID là i, Tên là "User_" + i
+                // ID is i, name is "User_" + i
                 writer.write(i + " User_" + i + "\n");
             }
 
-            // PHẦN 2: GHI DANH SÁCH BẠN BÈ (EDGES)
-            writer.write(totalEdges + "\n"); // Dòng đánh dấu số lượng cạnh
+            // PART 2: WRITE THE FRIENDSHIP LIST (EDGES)
+            writer.write(totalEdges + "\n"); // Line that marks the number of edges
             int edgeCount = 0;
 
-            // Vòng lặp chạy cho đến khi đủ 5000 mối quan hệ thì dừng
+            // Continue until enough relationships have been generated
             while (edgeCount < totalEdges) {
-                // Random ngẫu nhiên 2 người từ 1 đến totalUsers
+                // Randomly pick two people from 1 to totalUsers
                 int userA = random.nextInt(totalUsers) + 1;
                 int userB = random.nextInt(totalUsers) + 1;
 
-                // Quy tắc 1: Không tự kết bạn với chính mình
+                // Rule 1: Do not friend yourself
                 if (userA == userB) {
                     continue;
                 }
 
-                // Mẹo để chống trùng: Luôn đặt ID nhỏ lên trước, ID lớn ra sau
+                // Trick to avoid duplicates: always put the smaller ID first
                 int minId = Math.min(userA, userB);
                 int maxId = Math.max(userA, userB);
-                String edgeKey = minId + "-" + maxId; // Ví dụ: "1-5"
+                String edgeKey = minId + " " + maxId; // Example: "1-5"
 
-                // Quy tắc 2: Kiểm tra xem cặp này đã có chưa
+                // Rule 2: Check whether this pair already exists
                 if (!generatedEdges.contains(edgeKey)) {
-                    // Nếu chưa có thì đưa vào Set để đánh dấu
+                    // If not, add it to the Set as a marker
                     generatedEdges.add(edgeKey);
 
-                    // Ghi ra file
+                    // Write to file
                     writer.write(userA + " " + userB + "\n");
 
-                    // Tăng biến đếm lên
+                    // Increment the counter
                     edgeCount++;
                 }
             }
 
-            System.out.println("Tuyệt vời! Đã tạo thành công file: " + filePath);
-            System.out.println("Bao gồm " + totalUsers + " users và " + totalEdges + " mối quan hệ.");
+            System.out.println("Great! Successfully created file: " + filePath);
+            System.out.println("Includes " + totalUsers + " users and " + totalEdges + " relationships.");
 
         } catch (IOException e) {
-            System.out.println("Có lỗi khi ghi file: " + e.getMessage());
+            System.out.println("Error writing file: " + e.getMessage());
         }
     }
 }

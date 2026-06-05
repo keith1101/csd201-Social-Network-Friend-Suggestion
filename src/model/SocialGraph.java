@@ -4,11 +4,11 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 
 public class SocialGraph {
-    // Lưu thông tin định danh (Đỉnh)
+    // Store the vertex information
     private ArrayList<User> vertices;
-    
-    // Danh sách kề lưu quan hệ bạn bè (Cạnh)
-    // Index của adjList tương ứng với index của vertices
+
+    // Adjacency list for friendships (edges)
+    // The index in adjList corresponds to the index in vertices
     private ArrayList<LinkedList<Integer>> adjList;
 
     public SocialGraph() {
@@ -16,43 +16,43 @@ public class SocialGraph {
         this.adjList = new ArrayList<>();
     }
 
-    // Thêm User mới vào đồ thị
+    // Add a new user to the graph
     public void addUser(User user) {
         vertices.add(user);
-        adjList.add(new LinkedList<>()); // Khởi tạo danh sách bạn bè rỗng
+        adjList.add(new LinkedList<>()); // Initialize an empty friend list
     }
 
-    // Lấy index của User trong mảng vertices dựa vào ID
+    // Get the index of a user in the vertices list based on ID
     private int getIndexById(int userId) {
         for (int i = 0; i < vertices.size(); i++) {
             if (vertices.get(i).getId() == userId) {
                 return i;
             }
         }
-        return -1; // Không tìm thấy
+        return -1; // Not found
     }
 
-    // Thêm cạnh vô hướng (Kết bạn)
+    // Add an undirected edge (friendship)
     public boolean addEdge(int uId, int vId) {
         int uIndex = getIndexById(uId);
         int vIndex = getIndexById(vId);
 
-        if (uIndex == -1 || vIndex == -1) return false; // Lỗi: Không tồn tại user
+        if (uIndex == -1 || vIndex == -1) return false; // Error: user does not exist
 
-        // Lấy danh sách kề của 2 user
+        // Get the adjacency lists for both users
         LinkedList<Integer> uFriends = adjList.get(uIndex);
         LinkedList<Integer> vFriends = adjList.get(vIndex);
 
-        // Kiểm tra trùng lặp
+        // Check for duplicates
         if (!uFriends.contains(vId)) {
             uFriends.add(vId);
             vFriends.add(uId);
             return true;
         }
-        return false; // Đã là bạn bè
+        return false; // Already friends
     }
 
-    // Lấy danh sách ID bạn bè của 1 user
+    // Get the list of friend IDs for one user
     public LinkedList<Integer> getFriendsOf(int userId) {
         int index = getIndexById(userId);
         if (index != -1) return adjList.get(index);

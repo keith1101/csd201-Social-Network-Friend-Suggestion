@@ -15,33 +15,33 @@ public class SocialNetworkController {
         this.friendGraph = new SocialGraph();
     }
 
-    // Đăng ký user
+    // Register a user
     public void registerUser(int id, String fullName) {
         User newUser = new User(id, fullName);
         friendGraph.addUser(newUser);
-        System.out.println("Đã đăng ký: " + fullName);
+        System.out.println("Registered: " + fullName);
     }
 
-    // Kết bạn
+    // Create a friendship
     public void makeFriend(int uId, int vId) {
         boolean success = friendGraph.addEdge(uId, vId);
         if (success) {
-            System.out.println("Kết bạn thành công giữa " + uId + " và " + vId);
+            System.out.println("Friendship created successfully between " + uId + " and " + vId);
         } else {
-            System.out.println("Kết bạn thất bại (sai ID hoặc đã là bạn).");
+            System.out.println("Friendship creation failed (invalid ID or already friends).");
         }
     }
 
-    // Gợi ý bạn chung (Thuật toán cốt lõi)
+    // Suggest mutual friends (core algorithm)
     public ArrayList<SuggestedFriend> suggestMutualFriends(int targetUserId) {
         LinkedList<Integer> myFriends = friendGraph.getFriendsOf(targetUserId);
         ArrayList<SuggestedFriend> suggestions = new ArrayList<>();
 
-        // Logic tìm bạn chung: Duyệt qua tất cả user trong đồ thị
+        // Find mutual friends by scanning every user in the graph
         for (User u : friendGraph.getVertices()) {
             int currentId = u.getId();
-            
-            // Bỏ qua chính mình và những người đã là bạn
+
+            // Skip the target user and users who are already friends
             if (currentId == targetUserId || myFriends.contains(currentId)) {
                 continue;
             }
@@ -49,20 +49,20 @@ public class SocialNetworkController {
             LinkedList<Integer> theirFriends = friendGraph.getFriendsOf(currentId);
             int mutualCount = 0;
 
-            // Đếm số lượng bạn chung (Giao của 2 tập hợp)
+            // Count mutual friends (intersection of two sets)
             for (int fId : myFriends) {
                 if (theirFriends.contains(fId)) {
                     mutualCount++;
                 }
             }
 
-            // Chỉ gợi ý nếu có ít nhất 1 bạn chung
+            // Only suggest users with at least one mutual friend
             if (mutualCount > 0) {
                 suggestions.add(new SuggestedFriend(currentId, mutualCount));
             }
         }
 
-        // Tận dụng Comparable để sắp xếp cực nhanh O(N log N)
+        // Use Comparable to sort in O(N log N)
         Collections.sort(suggestions);
         return suggestions;
     }

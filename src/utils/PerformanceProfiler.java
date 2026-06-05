@@ -2,23 +2,23 @@ package utils;
 
 public class PerformanceProfiler {
 
-    // Interface hỗ trợ truyền hàm (Callback) vào để đo lường
+    // Functional interface for passing a callback into the profiler
     public interface AlgorithmTask {
         void execute();
     }
 
-    // Hàm đo đạc thời gian thực thi (mili-giây)
+    // Measure execution time in milliseconds
     public static long measureExecutionTime(AlgorithmTask task, String algorithmName) {
-        System.out.println("[PROFILER] Đang chạy thuật toán: " + algorithmName + "...");
+        System.out.println("[PROFILER] Running algorithm: " + algorithmName + "...");
 
-        long startTime = System.currentTimeMillis(); // Bắt đầu bấm giờ
+        long startTime = System.currentTimeMillis(); // Start timer
 
-        task.execute(); // Thực thi thuật toán của Huy hoặc Hào
+        task.execute(); // Execute the algorithm
 
-        long endTime = System.currentTimeMillis();   // Kết thúc bấm giờ
+        long endTime = System.currentTimeMillis();   // Stop timer
         long timeTaken = endTime - startTime;
 
-        System.out.println("[PROFILER] " + algorithmName + " hoàn tất trong: " + timeTaken + " ms.\n");
+        System.out.println("[PROFILER] " + algorithmName + " completed in: " + timeTaken + " ms.\n");
         return timeTaken;
     }
 }
