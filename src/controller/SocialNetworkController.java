@@ -1,69 +1,48 @@
 package controller;
 
-import model.SocialGraph;
+import java.util.ArrayList;
+import model.SocialGraphDAO;
+import model.Graph;
 import model.SuggestedFriend;
 import model.User;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedList;
+import view.ConsoleView;
 
 public class SocialNetworkController {
-    private SocialGraph friendGraph;
+    private Graph friendGraph;
+    private SocialGraphDAO socialGraphDAO;
 
     public SocialNetworkController() {
-        this.friendGraph = new SocialGraph();
+        this.socialGraphDAO = new SocialGraphDAO();
+        initializeGraph();
     }
 
-    // Register a user
-    public void registerUser(int id, String fullName) {
-        User newUser = new User(id, fullName);
-        friendGraph.addUser(newUser);
-        System.out.println("Registered: " + fullName);
+    public void initializeGraph() {
+        this.friendGraph = socialGraphDAO.loadGraphFromDatabase();
+        if (friendGraph == null) {
+            this.friendGraph = new Graph();
+        }
     }
 
-    // Create a friendship
-    public void makeFriend(int uId, int vId) {
-        boolean success = friendGraph.addEdge(uId, vId);
+    public void registerUser(User user) {
+        friendGraph.addUser(user);
+        ConsoleView.displayMessage("Registered: " + user.getFullName());
+    }
+
+    public void makeFriend(int id1, int id2) {
+        boolean success = friendGraph.addFriendship(id1, id2);
         if (success) {
-            System.out.println("Friendship created successfully between " + uId + " and " + vId);
+            ConsoleView.displayMessage("Friendship created successfully between " + id1 + " and " + id2);
         } else {
-            System.out.println("Friendship creation failed (invalid ID or already friends).");
+            ConsoleView.displayMessage("Friendship creation failed (invalid ID or already friends).");
         }
     }
 
-    // Suggest mutual friends (core algorithm)
-    public ArrayList<SuggestedFriend> suggestMutualFriends(int targetUserId) {
-        LinkedList<Integer> myFriends = friendGraph.getFriendsOf(targetUserId);
-        ArrayList<SuggestedFriend> suggestions = new ArrayList<>();
+    public void unFriend(int id1, int id2) {
+        // TODO: Future implementation for unFriend
+    }
 
-        // Find mutual friends by scanning every user in the graph
-        for (User u : friendGraph.getVertices()) {
-            int currentId = u.getId();
-
-            // Skip the target user and users who are already friends
-            if (currentId == targetUserId || myFriends.contains(currentId)) {
-                continue;
-            }
-
-            LinkedList<Integer> theirFriends = friendGraph.getFriendsOf(currentId);
-            int mutualCount = 0;
-
-            // Count mutual friends (intersection of two sets)
-            for (int fId : myFriends) {
-                if (theirFriends.contains(fId)) {
-                    mutualCount++;
-                }
-            }
-
-            // Only suggest users with at least one mutual friend
-            if (mutualCount > 0) {
-                suggestions.add(new SuggestedFriend(currentId, mutualCount));
-            }
-        }
-
-        // Use Comparable to sort in O(N log N)
-        Collections.sort(suggestions);
-        return suggestions;
+    public ArrayList<SuggestedFriend> suggestMutualFriends(int userId) {
+        // TODO: Future implementation for suggestMutualFriends
+        return new ArrayList<>();
     }
 }
