@@ -1,104 +1,108 @@
 package utils;
 
 import controller.SocialNetworkController;
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.sql.Connection;
-import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.Statement;
 
 public class DataSynchronizer {
 
-    // Database connection settings
-    private static final String DB_NAME = "SocialNetworkFriendSuggestion";
-    private static final String DB_USER = "sa";
-    private static final String DB_PASS = "12345";
-    private static final String DB_URL = "jdbc:sqlserver://localhost: 1433;databaseName=" + DB_NAME;
-    private static final String FALLBACK_FILE_PATH = "src/data/users.txt";
+    //Querry setting
+    private static final String GET_USER = "SELECT user_id, full_name FROM Users";
+    private static final String GET_FRIENDSHIP = "SELECT user_id1, user_id2 FROM Friendships";
+    private static final String INSERT_FRIENDSHIP = "INSERT INTO Friendships(user_id1, user_id2) VALUES (?,?)";
+    private static final String DELETE_FRIENDSHIP = "DELETE FROM Friendships where user_id1=?, user_id2=?";
 
-    /**
-     * Main entry point called when the server starts.
-     * @param controller
-     */
-    public static void loadDataOnStartup(SocialNetworkController controller) {
+    public void loadDataOnStartup(SocialNetworkController controller) {
         System.out.println("--- STARTING SERVER DATA INITIALIZATION ---");
 
         boolean isDbSuccess = fetchFromDatabase(controller);
 
         if (!isDbSuccess) {
-            System.err.println("[WARNING] Database is unavailable or not responding. Activating fallback mode...");
-            fetchFromFallbackFile(controller);
+            System.err.println("Database is unavaiable or has buggged");
+        } else {
+            System.out.println("--- MEMORY GRAPH INITIALIZATION COMPLETE ---");
         }
 
-        System.out.println("--- MEMORY GRAPH INITIALIZATION COMPLETE ---");
     }
 
-    /**
-     * 1. Try to load data from the database using JDBC.
-     */
+    //Load data from sql server
     private static boolean fetchFromDatabase(SocialNetworkController controller) {
-        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASS);
-             Statement stmt = conn.createStatement()) {
+        Connection conn = null;
+        PreparedStatement ptm = null;
+        ResultSet rs = null;
+        try {
 
-            System.out.println("[INFO] Database connection successful. Loading data...");
+            conn = DBUtils.getConnection();
+            if (conn != null) {
+                System.out.println("[INFO] Database connection successful. Loading data...");
+                ptm = conn.prepareStatement(GET_USER);
+                //Load all users v
+                rs = ptm.executeQuery();
+                //parse all the data from the querry
+                while (rs.next()) {
+                    controller.registerUser(rs.getInt("user_id"), rs.getString("full_name"));
+                }
 
-            // Step 1.1: Load all users
-            ResultSet rsUsers = stmt.executeQuery("SELECT user_id, full_name FROM Users");
-            while (rsUsers.next()) {
-                controller.registerUser(rsUsers.getInt("user_id"), rsUsers.getString("full_name"));
+                //set new querry
+                ptm = conn.prepareStatement(GET_FRIENDSHIP);
+                //Load all relationships e
+                rs = ptm.executeQuery();
+                //parse all the data from the querry
+                while (rs.next()) {
+                    // Use the makeFriend method already implemented in the controller
+                    controller.makeFriend(rs.getInt("user_id1"), rs.getInt("user_id2"));
+                }
             }
 
-            // Step 1.2: Load all relationships (edges)
-            ResultSet rsFriends = stmt.executeQuery("SELECT user_id1, user_id2 FROM Friendships");
-            while (rsFriends.next()) {
-                // Use the makeFriend method already implemented in the controller
-                controller.makeFriend(rsFriends.getInt("user_id1"), rsFriends.getInt("user_id2"));
-            }
-
-            return true; // Success
+            return true; // Success to load data
 
         } catch (Exception e) {
-            System.err.println("[ERROR] Database connection error: " + e.getMessage());
-            return false; // Failure, signal that fallback is needed
+            System.out.println("[ERROR] Database connection error: " + e.getMessage());
+            return false; //cant load data from database
+        }
+    }
+    
+    private boolean insertFriendships(int user_id1, int user_id2){
+        Connection conn = null;
+        PreparedStatement ptm = null;
+        ResultSet rs = null;
+        try {
+            boolean check = false;
+            conn = DBUtils.getConnection();
+            if (conn != null) {
+                ptm = conn.prepareStatement(INSERT_FRIENDSHIP);
+                ptm.setInt(1,user_id1);
+                ptm.setInt(2,user_id2);
+                check= (ptm.executeUpdate()>0) ? true: false;                           
+            }
+            return check;//return the result of the queryy
+
+        } catch (Exception e) {
+            System.out.println("[ERROR] Database connection error: " + e.getMessage());
+            return false; //cant connect database
+        }
+    }
+    
+    private boolean deleteFriendships(int user_id1, int user_id2){
+        Connection conn = null;
+        PreparedStatement ptm = null;
+        ResultSet rs = null;
+        try {
+            boolean check = false;
+            conn = DBUtils.getConnection();
+            if (conn != null) {
+                ptm = conn.prepareStatement(DELETE_FRIENDSHIP);
+                ptm.setInt(1,user_id1);
+                ptm.setInt(2,user_id2);
+                check= (ptm.executeUpdate()>0) ? true: false;                           
+            }
+            return check;//return the result of the queryy
+
+        } catch (Exception e) {
+            System.out.println("[ERROR] Database connection error: " + e.getMessage());
+            return false; //cant connect database
         }
     }
 
-    /**
-     * 2. Read data from the fallback txt file.
-     * File format example:
-     * USER:1:Alice
-     * USER:2:Bob
-     * FRIEND:1:2
-     */
-    private static void fetchFromFallbackFile(SocialNetworkController controller) {
-        System.out.println("[INFO] Reading fallback data file: " + FALLBACK_FILE_PATH);
-
-        try (BufferedReader br = new BufferedReader(new FileReader(FALLBACK_FILE_PATH))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                line = line.trim();
-                if (line.isEmpty() || line.startsWith("#")) continue; // Skip empty lines or comments
-
-                String[] parts = line.split(":");
-                String type = parts[0];
-
-                if (type.equals("USER") && parts.length == 3) {
-                    int id = Integer.parseInt(parts[1]);
-                    String name = parts[2];
-                    controller.registerUser(id, name);
-                }
-                else if (type.equals("FRIEND") && parts.length == 3) {
-                    int uId = Integer.parseInt(parts[1]);
-                    int vId = Integer.parseInt(parts[2]);
-                    controller.makeFriend(uId, vId);
-                }
-            }
-            System.out.println("[INFO] Fallback file data loaded successfully.");
-
-        } catch (Exception e) {
-            System.err.println("[FATAL] Catastrophic error: both the database and the fallback file could not be read!");
-            // In practice, if both fail, the server may have to shut down (System.exit(1))
-        }
-    }
 }
