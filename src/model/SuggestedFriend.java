@@ -1,19 +1,22 @@
 package model;
 
 public class SuggestedFriend implements Comparable<SuggestedFriend> {
-    private int userId;
-    private int mutualFriendsCount;
+    private final int suggestedUserId;
+    private final int mutualFriendsCount;
 
-    public SuggestedFriend(int userId, int mutualFriendsCount) {
-        this.userId = userId;
-        this.mutualFriendsCount = mutualFriendsCount;
+    public SuggestedFriend(int id, int count) {
+        this.suggestedUserId = id;
+        this.mutualFriendsCount = count;
     }
 
-    public int getUserId() { return userId; }
-    public int getMutualFriendsCount() { return mutualFriendsCount; }
-    
+    public int getSuggestedId() {
+        return suggestedUserId;
+    }
 
-    // Override the comparison method to sort in descending order by mutual friend count
+    public int getMutualCount() {
+        return mutualFriendsCount;
+    }
+
     @Override
     public int compareTo(SuggestedFriend other) {
         return Integer.compare(other.mutualFriendsCount, this.mutualFriendsCount);
