@@ -11,6 +11,7 @@ public class SuggestedFriend implements Comparable<SuggestedFriend> {
 
     public int getUserId() { return userId; }
     public int getMutualFriendsCount() { return mutualFriendsCount; }
+    
 
     // Override the comparison method to sort in descending order by mutual friend count
     @Override

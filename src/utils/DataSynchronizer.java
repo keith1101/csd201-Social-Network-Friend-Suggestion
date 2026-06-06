@@ -4,6 +4,9 @@ import controller.SocialNetworkController;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import model.SocialGraph;
+import model.User;
+import view.View;
 
 public class DataSynchronizer {
 
@@ -13,21 +16,9 @@ public class DataSynchronizer {
     private static final String INSERT_FRIENDSHIP = "INSERT INTO Friendships(user_id1, user_id2) VALUES (?,?)";
     private static final String DELETE_FRIENDSHIP = "DELETE FROM Friendships where user_id1=?, user_id2=?";
 
-    public void loadDataOnStartup(SocialNetworkController controller) {
-        System.out.println("--- STARTING SERVER DATA INITIALIZATION ---");
-
-        boolean isDbSuccess = fetchFromDatabase(controller);
-
-        if (!isDbSuccess) {
-            System.err.println("Database is unavaiable or has buggged");
-        } else {
-            System.out.println("--- MEMORY GRAPH INITIALIZATION COMPLETE ---");
-        }
-
-    }
-
     //Load data from sql server
-    private static boolean fetchFromDatabase(SocialNetworkController controller) {
+    public static SocialGraph fetchFromDatabase() {
+        SocialGraph Graph = new SocialGraph();
         Connection conn = null;
         PreparedStatement ptm = null;
         ResultSet rs = null;
@@ -35,13 +26,13 @@ public class DataSynchronizer {
 
             conn = DBUtils.getConnection();
             if (conn != null) {
-                System.out.println("[INFO] Database connection successful. Loading data...");
+                View.showMessage("[INFO] Database connection successful. Loading data...");
                 ptm = conn.prepareStatement(GET_USER);
                 //Load all users v
                 rs = ptm.executeQuery();
                 //parse all the data from the querry
                 while (rs.next()) {
-                    controller.registerUser(rs.getInt("user_id"), rs.getString("full_name"));
+                   Graph.addUser(new User (rs.getInt("user_id"),rs.getString("full_name")));
                 }
 
                 //set new querry
@@ -51,15 +42,15 @@ public class DataSynchronizer {
                 //parse all the data from the querry
                 while (rs.next()) {
                     // Use the makeFriend method already implemented in the controller
-                    controller.makeFriend(rs.getInt("user_id1"), rs.getInt("user_id2"));
+                    Graph.addEdge(rs.getInt("user_id1"), rs.getInt("user_id2"));
                 }
             }
 
-            return true; // Success to load data
+            return Graph; // Success to load data
 
         } catch (Exception e) {
-            System.out.println("[ERROR] Database connection error: " + e.getMessage());
-            return false; //cant load data from database
+            View.showMessage("[ERROR] Database connection error: " + e.getMessage());
+            return null; //cant load data from database
         }
     }
     
@@ -79,7 +70,7 @@ public class DataSynchronizer {
             return check;//return the result of the queryy
 
         } catch (Exception e) {
-            System.out.println("[ERROR] Database connection error: " + e.getMessage());
+            View.showMessage("[ERROR] Database connection error: " + e.getMessage());
             return false; //cant connect database
         }
     }
@@ -100,7 +91,7 @@ public class DataSynchronizer {
             return check;//return the result of the queryy
 
         } catch (Exception e) {
-            System.out.println("[ERROR] Database connection error: " + e.getMessage());
+            View.showMessage("[ERROR] Database connection error: " + e.getMessage());
             return false; //cant connect database
         }
     }

@@ -2,6 +2,7 @@ package model;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
+import utils.DataSynchronizer;
 
 public class SocialGraph {
     // Store the vertex information

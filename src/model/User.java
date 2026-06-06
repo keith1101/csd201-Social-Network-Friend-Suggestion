@@ -9,8 +9,19 @@ public class User {
         this.fullName = fullName;
     }
 
-    public int getId() { return id; }
-    public String getFullName() { return fullName; }
+    public int getId() { 
+        return id; }
+    
+    public String getFullName() { 
+        return fullName; }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
     
     @Override
     public String toString() {
