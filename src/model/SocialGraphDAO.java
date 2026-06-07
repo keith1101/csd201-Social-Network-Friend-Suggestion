@@ -6,9 +6,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import model.domain.Graph;
-import model.entity.Friendship;
-import model.entity.User;
+//import model.domain.Graph;
+//import model.entity.Friendship;
+//import model.entity.User;
 import view.ConsoleView;
 
 public class SocialGraphDAO {

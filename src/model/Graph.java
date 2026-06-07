@@ -34,6 +34,10 @@ public class Graph {
 
     public User searchUserById(int userId) {
         // TODO: Future implementation for searchUserById
+        int index = getIndexById(userId);
+        if (index != -1) {
+            return vertices.get(index);
+        }
         return null;
     }
 
@@ -64,7 +68,44 @@ public class Graph {
 
     public LinkedList<User> getMutualFriends(int userId1, int userId2) {
         // TODO: Future implementation for getMutualFriends
-        return new LinkedList<>();
+        LinkedList<User> mutualFriends = new LinkedList<>();
+        LinkedList<Integer> list1 = getFriendsOf(userId1);
+        LinkedList<Integer> list2 = getFriendsOf(userId2);
+
+        java.util.Iterator<Integer> it1 = list1.iterator();
+        java.util.Iterator<Integer> it2 = list2.iterator();
+
+        if (!it1.hasNext() || !it2.hasNext()) {
+            return mutualFriends;
+        }
+
+        Integer id1 = it1.next();
+        Integer id2 = it2.next();
+
+        while (true) {
+            if (id1.equals(id2)) {
+                User user = searchUserById(id1);
+                if (user != null) {
+                    mutualFriends.add(user);
+                }
+                if (!it1.hasNext() || !it2.hasNext()) {
+                    break;
+                }
+                id1 = it1.next();
+                id2 = it2.next();
+            } else if (id1 < id2) {
+                if (!it1.hasNext()) {
+                    break;
+                }
+                id1 = it1.next();
+            } else {
+                if (!it2.hasNext()) {
+                    break;
+                }
+                id2 = it2.next();
+            }
+        }
+        return mutualFriends;
     }
 
     public ArrayList<SuggestedFriend> suggestFriends(int userId) {

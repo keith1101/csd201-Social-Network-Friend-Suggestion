@@ -43,6 +43,31 @@ public class SocialNetworkController {
 
     public ArrayList<SuggestedFriend> suggestMutualFriends(int userId) {
         // TODO: Future implementation for suggestMutualFriends
-        return new ArrayList<>();
+        ArrayList<SuggestedFriend> result = new ArrayList<>();
+        ArrayList<User> allUsers = friendGraph.getVertices();
+        java.util.LinkedList<Integer> directFriends = friendGraph.getFriendsOf(userId);
+
+        model.MyMaxHeap heap = new model.MyMaxHeap(allUsers.size());
+
+        for (User candidate : allUsers) {
+            int candidateId = candidate.getId();
+            if (candidateId == userId || directFriends.contains(candidateId)) {
+                continue;
+            }
+            
+            int mutualCount = friendGraph.getMutualFriends(userId, candidateId).size();
+            
+            if (mutualCount > 0) {
+                heap.insert(new SuggestedFriend(candidateId, mutualCount));
+            }
+        }
+
+        int topK = 5;
+        while (!heap.isEmpty() && topK > 0) {
+            result.add(heap.extractMax());
+            topK--;
+        }
+
+        return result;
     }
 }
