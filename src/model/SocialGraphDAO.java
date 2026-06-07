@@ -6,9 +6,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import model.domain.Graph;
-import model.entity.Friendship;
-import model.entity.User;
+import model.Graph;
+import model.Friendship;
+import model.User;
 import view.ConsoleView;
 
 public class SocialGraphDAO {
@@ -18,13 +18,25 @@ public class SocialGraphDAO {
 
     private static final String GET_USERS = "SELECT user_id, full_name FROM Users";
     private static final String GET_FRIENDSHIPS = "SELECT user_id1, user_id2 FROM Friendships";
+    private static final String INSERT_USER = "INSERT INTO Users(user_id, full_name) VALUES (?, ?)";
+    private static final String UPDATE_USER = "UPDATE Users SET full_name = ? WHERE user_id = ?";
+    private static final String DELETE_USER = "DELETE FROM Users WHERE user_id = ?";
+    private static final String DELETE_USER_FRIENDSHIPS = "DELETE FROM Friendships WHERE user_id1 = ? OR user_id2 = ?";
     private static final String INSERT_FRIENDSHIP = "INSERT INTO Friendships(user_id1, user_id2) VALUES (?, ?)";
-    private static final String DELETE_FRIENDSHIP = "DELETE FROM Friendships WHERE user_id1 = ? AND user_id2 = ?";
+    private static final String DELETE_FRIENDSHIP =
+            "DELETE FROM Friendships WHERE (user_id1 = ? AND user_id2 = ?) OR (user_id1 = ? AND user_id2 = ?)";
+    private static final String CHECK_USER_EXISTS = "SELECT 1 FROM Users WHERE user_id = ?";
+    private static final String CHECK_FRIENDSHIP_EXISTS =
+            "SELECT 1 FROM Friendships WHERE (user_id1 = ? AND user_id2 = ?) OR (user_id1 = ? AND user_id2 = ?)";
 
     private final String connectionString;
 
     public SocialGraphDAO() {
         this.connectionString = "jdbc:sqlserver://localhost:1433;databaseName=" + DB_NAME;
+    }
+        private Connection getConnection() throws ClassNotFoundException, SQLException {
+        Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+        return DriverManager.getConnection(connectionString, USER_NAME, PASSWORD);
     }
 
     public Graph loadGraphFromDatabase() {
@@ -79,18 +91,47 @@ public class SocialGraphDAO {
     }
 
     public boolean insertUser(User user) {
-        // TODO: Future implementation for insertUser
-        return false;
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(INSERT_USER)) {
+
+            statement.setInt(1, user.getId());
+            statement.setString(2, user.getFullName());
+            return statement.executeUpdate() > 0;
+        } catch (Exception exception) {
+            ConsoleView.displayMessage("[ERROR] Database connection error: " + exception.getMessage());
+            return false;
+        }
     }
 
     public boolean updateUser(User user) {
-        // TODO: Future implementation for updateUser
-        return false;
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(UPDATE_USER)) {
+
+            statement.setString(1, user.getFullName());
+            statement.setInt(2, user.getId());
+            return statement.executeUpdate() > 0;
+        } catch (Exception exception) {
+            ConsoleView.displayMessage("[ERROR] Database connection error: " + exception.getMessage());
+            return false;
+        }
     }
 
     public boolean deleteUser(int userId) {
-        // TODO: Future implementation for deleteUser
-        return false;
+        try (Connection connection = getConnection()) {
+            try (PreparedStatement deleteFriendships = connection.prepareStatement(DELETE_USER_FRIENDSHIPS)) {
+                deleteFriendships.setInt(1, userId);
+                deleteFriendships.setInt(2, userId);
+                deleteFriendships.executeUpdate();
+            }
+
+            try (PreparedStatement deleteUser = connection.prepareStatement(DELETE_USER)) {
+                deleteUser.setInt(1, userId);
+                return deleteUser.executeUpdate() > 0;
+            }
+        } catch (Exception exception) {
+            ConsoleView.displayMessage("[ERROR] Database connection error: " + exception.getMessage());
+            return false;
+        }
     }
 
     public boolean insertFriendship(Friendship friendship) {
@@ -112,6 +153,8 @@ public class SocialGraphDAO {
 
             statement.setInt(1, userId1);
             statement.setInt(2, userId2);
+            statement.setInt(3, userId2);
+            statement.setInt(4, userId1);
             return statement.executeUpdate() > 0;
         } catch (Exception exception) {
             ConsoleView.displayMessage("[ERROR] Database connection error: " + exception.getMessage());
@@ -120,17 +163,33 @@ public class SocialGraphDAO {
     }
 
     public boolean isUserExists(int userId) {
-        // TODO: Future implementation for isUserExists
-        return false;
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(CHECK_USER_EXISTS)) {
+
+            statement.setInt(1, userId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next();
+            }
+        } catch (Exception exception) {
+            ConsoleView.displayMessage("[ERROR] Database connection error: " + exception.getMessage());
+            return false;
+        }
     }
 
     public boolean isFriendshipExists(int userId1, int userId2) {
-        // TODO: Future implementation for isFriendshipExists
-        return false;
-    }
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(CHECK_FRIENDSHIP_EXISTS)) {
 
-    private Connection getConnection() throws ClassNotFoundException, SQLException {
-        Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
-        return DriverManager.getConnection(connectionString, USER_NAME, PASSWORD);
+            statement.setInt(1, userId1);
+            statement.setInt(2, userId2);
+            statement.setInt(3, userId2);
+            statement.setInt(4, userId1);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next();
+            }
+        } catch (Exception exception) {
+            ConsoleView.displayMessage("[ERROR] Database connection error: " + exception.getMessage());
+            return false;
+        }
     }
 }
