@@ -1,69 +1,73 @@
 package controller;
 
-import model.SocialGraph;
+import java.util.ArrayList;
+import model.SocialGraphDAO;
+import model.Graph;
 import model.SuggestedFriend;
 import model.User;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedList;
+import view.ConsoleView;
 
 public class SocialNetworkController {
-    private SocialGraph friendGraph;
+    private Graph friendGraph;
+    private SocialGraphDAO socialGraphDAO;
 
     public SocialNetworkController() {
-        this.friendGraph = new SocialGraph();
+        this.socialGraphDAO = new SocialGraphDAO();
+        initializeGraph();
     }
 
-    // Register a user
-    public void registerUser(int id, String fullName) {
-        User newUser = new User(id, fullName);
-        friendGraph.addUser(newUser);
-        System.out.println("Registered: " + fullName);
-    }
-
-    // Create a friendship
-    public void makeFriend(int uId, int vId) {
-        boolean success = friendGraph.addEdge(uId, vId);
-        if (success) {
-            System.out.println("Friendship created successfully between " + uId + " and " + vId);
-        } else {
-            System.out.println("Friendship creation failed (invalid ID or already friends).");
+    public void initializeGraph() {
+        this.friendGraph = socialGraphDAO.loadGraphFromDatabase();
+        if (friendGraph == null) {
+            this.friendGraph = new Graph();
         }
     }
 
-    // Suggest mutual friends (core algorithm)
-    public ArrayList<SuggestedFriend> suggestMutualFriends(int targetUserId) {
-        LinkedList<Integer> myFriends = friendGraph.getFriendsOf(targetUserId);
-        ArrayList<SuggestedFriend> suggestions = new ArrayList<>();
+    public void registerUser(User user) {
+        friendGraph.addUser(user);
+        ConsoleView.displayMessage("Registered: " + user.getFullName());
+    }
 
-        // Find mutual friends by scanning every user in the graph
-        for (User u : friendGraph.getVertices()) {
-            int currentId = u.getId();
+    public void makeFriend(int id1, int id2) {
+        boolean success = friendGraph.addFriendship(id1, id2);
+        if (success) {
+            ConsoleView.displayMessage("Friendship created successfully between " + id1 + " and " + id2);
+        } else {
+            ConsoleView.displayMessage("Friendship creation failed (invalid ID or already friends).");
+        }
+    }
 
-            // Skip the target user and users who are already friends
-            if (currentId == targetUserId || myFriends.contains(currentId)) {
+    public void unFriend(int id1, int id2) {
+        // chua lam
+    }
+
+    public ArrayList<SuggestedFriend> suggestMutualFriends(int userId) {
+        // TODO: Future implementation for suggestMutualFriends
+        ArrayList<SuggestedFriend> result = new ArrayList<>();
+        ArrayList<User> allUsers = friendGraph.getVertices();
+        java.util.LinkedList<Integer> directFriends = friendGraph.getFriendsOf(userId);
+
+        model.MyMaxHeap heap = new model.MyMaxHeap(allUsers.size());
+
+        for (User candidate : allUsers) {
+            int candidateId = candidate.getId();
+            if (candidateId == userId || directFriends.contains(candidateId)) {
                 continue;
             }
-
-            LinkedList<Integer> theirFriends = friendGraph.getFriendsOf(currentId);
-            int mutualCount = 0;
-
-            // Count mutual friends (intersection of two sets)
-            for (int fId : myFriends) {
-                if (theirFriends.contains(fId)) {
-                    mutualCount++;
-                }
-            }
-
-            // Only suggest users with at least one mutual friend
+            
+            int mutualCount = friendGraph.getMutualFriends(userId, candidateId).size();
+            
             if (mutualCount > 0) {
-                suggestions.add(new SuggestedFriend(currentId, mutualCount));
+                heap.insert(new SuggestedFriend(candidateId, mutualCount));
             }
         }
 
-        // Use Comparable to sort in O(N log N)
-        Collections.sort(suggestions);
-        return suggestions;
+        int topK = 5;
+        while (!heap.isEmpty() && topK > 0) {
+            result.add(heap.extractMax());
+            topK--;
+        }
+
+        return result;
     }
 }
