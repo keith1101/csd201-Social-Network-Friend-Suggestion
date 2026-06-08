@@ -38,7 +38,7 @@ public class SocialNetworkController {
     }
 
     public void unFriend(int id1, int id2) {
-        // TODO: Future implementation for unFriend
+        // chua lam
     }
 
     public ArrayList<SuggestedFriend> suggestMutualFriends(int userId) {

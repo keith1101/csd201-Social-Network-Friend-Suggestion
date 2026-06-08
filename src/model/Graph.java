@@ -28,8 +28,18 @@ public class Graph {
     }
 
     public boolean removeUser(int userId) {
-        // TODO: Future implementation for removeUser
-        return false;
+        int userIndex = getIndexById(userId);
+        if (userIndex == -1) {
+            return false;
+        }
+
+        for (LinkedList<Integer> friends : adjList) {
+            friends.remove(Integer.valueOf(userId));
+        }
+
+        vertices.remove(userIndex);
+        adjList.remove(userIndex);
+        return true;
     }
 
     public User searchUserById(int userId) {
@@ -62,8 +72,16 @@ public class Graph {
     }
 
     public boolean removeFriendship(int userId1, int userId2) {
-        // TODO: Future implementation for removeFriendship
-        return false;
+        int userIndex1 = getIndexById(userId1);
+        int userIndex2 = getIndexById(userId2);
+
+        if (userIndex1 == -1 || userIndex2 == -1) {
+            return false;
+        }
+
+        boolean removedFromFirst = adjList.get(userIndex1).remove(Integer.valueOf(userId2));
+        boolean removedFromSecond = adjList.get(userIndex2).remove(Integer.valueOf(userId1));
+        return removedFromFirst && removedFromSecond;
     }
 
     public LinkedList<User> getMutualFriends(int userId1, int userId2) {
