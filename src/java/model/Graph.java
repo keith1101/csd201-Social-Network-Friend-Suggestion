@@ -2,11 +2,13 @@ package model;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.Queue;
+
 import model.User;
 
 public class Graph {
     private final ArrayList<User> vertices;
-    private final ArrayList<LinkedList<Integer>> adjList;
+    private final ArrayList<ArrayList<Integer>> adjList;
 
     public Graph() {
         this.vertices = new ArrayList<>();
@@ -24,7 +26,7 @@ public class Graph {
 
     public void addUser(User user) {
         vertices.add(user);
-        adjList.add(new LinkedList<>());
+        adjList.add(new ArrayList<>());
     }
 
     public boolean removeUser(int userId) {
@@ -33,7 +35,7 @@ public class Graph {
             return false;
         }
 
-        for (LinkedList<Integer> friends : adjList) {
+        for (ArrayList<Integer> friends : adjList) {
             friends.remove(Integer.valueOf(userId));
         }
 
@@ -43,7 +45,6 @@ public class Graph {
     }
 
     public User searchUserById(int userId) {
-        // TODO: Future implementation for searchUserById
         int index = getIndexById(userId);
         if (index != -1) {
             return vertices.get(index);
@@ -59,8 +60,8 @@ public class Graph {
             return false;
         }
 
-        LinkedList<Integer> userFriends1 = adjList.get(userIndex1);
-        LinkedList<Integer> userFriends2 = adjList.get(userIndex2);
+        ArrayList<Integer> userFriends1 = adjList.get(userIndex1);
+        ArrayList<Integer> userFriends2 = adjList.get(userIndex2);
 
         if (userFriends1.contains(userId2)) {
             return false;
@@ -84,11 +85,10 @@ public class Graph {
         return removedFromFirst && removedFromSecond;
     }
 
-    public LinkedList<User> getMutualFriends(int userId1, int userId2) {
-        // TODO: Future implementation for getMutualFriends
-        LinkedList<User> mutualFriends = new LinkedList<>();
-        LinkedList<Integer> list1 = getFriendsOf(userId1);
-        LinkedList<Integer> list2 = getFriendsOf(userId2);
+    public ArrayList<User> getMutualFriends(int userId1, int userId2) {
+        ArrayList<User> mutualFriends = new ArrayList<>();
+        ArrayList<Integer> list1 = getFriendsOf(userId1);
+        ArrayList<Integer> list2 = getFriendsOf(userId2);
 
         java.util.Iterator<Integer> it1 = list1.iterator();
         java.util.Iterator<Integer> it2 = list2.iterator();
@@ -132,15 +132,39 @@ public class Graph {
     }
 
     public void bfsTraverse(int startUserId) {
-        // TODO: Future implementation for bfsTraverse
+        int V = vertices.size();
+        boolean[] visited = new boolean[V];
+        ArrayList<Integer> result = new ArrayList<>();
+
+        int src = startUserId;
+        Queue<Integer> q = new LinkedList<>();
+        visited[src] = true;
+        q.add(src);
+
+        while (!q.isEmpty()) {
+            int curr = q.poll();
+            result.add(curr);
+
+            for (int x : adjList.get(curr)) {
+                if (!visited[x]) {
+                    visited[x] = true;
+                    q.add(x);
+                }
+            }
+        }
+
+        for (int item : result) {
+            System.out.print(item);
+        }
+        
     }
 
-    public LinkedList<Integer> getFriendsOf(int userId) {
+    public ArrayList<Integer> getFriendsOf(int userId) {
         int index = getIndexById(userId);
         if (index != -1) {
             return adjList.get(index);
         }
-        return new LinkedList<>();
+        return new ArrayList<>();
     }
 
     public ArrayList<User> getVertices() {
