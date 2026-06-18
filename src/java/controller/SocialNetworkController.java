@@ -1,6 +1,10 @@
 package controller;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.PriorityQueue;
+
 import model.SocialGraphDAO;
 import model.Graph;
 import model.SuggestedFriend;
@@ -45,9 +49,10 @@ public class SocialNetworkController {
         // TODO: Future implementation for suggestMutualFriends
         ArrayList<SuggestedFriend> result = new ArrayList<>();
         ArrayList<User> allUsers = friendGraph.getVertices();
-        java.util.LinkedList<Integer> directFriends = friendGraph.getFriendsOf(userId);
+        java.util.ArrayList<Integer> directFriends = friendGraph.getFriendsOf(userId);
 
-        model.MyMaxHeap heap = new model.MyMaxHeap(allUsers.size());
+        // model.MyMaxHeap heap = new model.MyMaxHeap(allUsers.size());    
+        PriorityQueue<SuggestedFriend> heap = new PriorityQueue<SuggestedFriend>();
 
         for (User candidate : allUsers) {
             int candidateId = candidate.getId();
@@ -58,13 +63,13 @@ public class SocialNetworkController {
             int mutualCount = friendGraph.getMutualFriends(userId, candidateId).size();
             
             if (mutualCount > 0) {
-                heap.insert(new SuggestedFriend(candidateId, mutualCount));
+                heap.add(new SuggestedFriend(candidateId, mutualCount));
             }
         }
 
         int topK = 5;
         while (!heap.isEmpty() && topK > 0) {
-            result.add(heap.extractMax());
+            result.add(heap.poll());
             topK--;
         }
 
