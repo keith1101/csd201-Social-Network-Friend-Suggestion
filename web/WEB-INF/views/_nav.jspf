@@ -1,0 +1,13 @@
+<%-- Shared top navigation. Set ${active} (admin|user|dashboard) before including. --%>
+<c:set var="ctx" value="${pageContext.request.contextPath}" />
+<nav class="topnav">
+    <div class="brand">
+        <span class="logo">b</span>
+        <span>BookFace<small>connect · suggest · visualize</small></span>
+    </div>
+    <div class="links">
+        <a href="${ctx}/social-network?action=user"      class="${active == 'user'      ? 'active' : ''}">Friends</a>
+        <a href="${ctx}/social-network?action=dashboard" class="${active == 'dashboard' ? 'active' : ''}">Dashboard</a>
+        <a href="${ctx}/social-network?action=admin"     class="${active == 'admin'     ? 'active' : ''}">Admin</a>
+    </div>
+</nav>

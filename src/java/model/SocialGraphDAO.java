@@ -6,12 +6,15 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import model.Graph;
 import model.Friendship;
 import model.User;
-import view.ConsoleView;
 
 public class SocialGraphDAO {
+    private static final Logger LOGGER = Logger.getLogger(SocialGraphDAO.class.getName());
+
     private static final String DB_NAME = "SocialNetworkFriendSuggestion";
     private static final String USER_NAME = "sa";
     private static final String PASSWORD = "12345";
@@ -43,7 +46,7 @@ public class SocialGraphDAO {
         Graph graph = new Graph();
 
         try {
-            ConsoleView.displayMessage("[INFO] Database connection successful. Loading data...");
+            LOGGER.info("Database connection successful. Loading graph data...");
 
             for (User user : loadUsers()) {
                 graph.addUser(user);
@@ -55,7 +58,7 @@ public class SocialGraphDAO {
 
             return graph;
         } catch (Exception exception) {
-            ConsoleView.displayMessage("[ERROR] Database connection error: " + exception.getMessage());
+            LOGGER.log(Level.SEVERE, "Failed to load graph from database", exception);
             return null;
         }
     }
@@ -98,7 +101,7 @@ public class SocialGraphDAO {
             statement.setString(2, user.getFullName());
             return statement.executeUpdate() > 0;
         } catch (Exception exception) {
-            ConsoleView.displayMessage("[ERROR] Database connection error: " + exception.getMessage());
+            LOGGER.log(Level.SEVERE, "Failed to insert user " + user.getId(), exception);
             return false;
         }
     }
@@ -111,7 +114,7 @@ public class SocialGraphDAO {
             statement.setInt(2, user.getId());
             return statement.executeUpdate() > 0;
         } catch (Exception exception) {
-            ConsoleView.displayMessage("[ERROR] Database connection error: " + exception.getMessage());
+            LOGGER.log(Level.SEVERE, "Failed to update user " + user.getId(), exception);
             return false;
         }
     }
@@ -129,7 +132,7 @@ public class SocialGraphDAO {
                 return deleteUser.executeUpdate() > 0;
             }
         } catch (Exception exception) {
-            ConsoleView.displayMessage("[ERROR] Database connection error: " + exception.getMessage());
+            LOGGER.log(Level.SEVERE, "Failed to delete user " + userId, exception);
             return false;
         }
     }
@@ -142,7 +145,9 @@ public class SocialGraphDAO {
             statement.setInt(2, friendship.getUserId2());
             return statement.executeUpdate() > 0;
         } catch (Exception exception) {
-            ConsoleView.displayMessage("[ERROR] Database connection error: " + exception.getMessage());
+            LOGGER.log(Level.SEVERE,
+                    "Failed to insert friendship " + friendship.getUserId1() + "-" + friendship.getUserId2(),
+                    exception);
             return false;
         }
     }
@@ -157,7 +162,8 @@ public class SocialGraphDAO {
             statement.setInt(4, userId1);
             return statement.executeUpdate() > 0;
         } catch (Exception exception) {
-            ConsoleView.displayMessage("[ERROR] Database connection error: " + exception.getMessage());
+            LOGGER.log(Level.SEVERE,
+                    "Failed to delete friendship " + userId1 + "-" + userId2, exception);
             return false;
         }
     }
@@ -171,7 +177,7 @@ public class SocialGraphDAO {
                 return resultSet.next();
             }
         } catch (Exception exception) {
-            ConsoleView.displayMessage("[ERROR] Database connection error: " + exception.getMessage());
+            LOGGER.log(Level.SEVERE, "Failed to check existence of user " + userId, exception);
             return false;
         }
     }
@@ -188,7 +194,8 @@ public class SocialGraphDAO {
                 return resultSet.next();
             }
         } catch (Exception exception) {
-            ConsoleView.displayMessage("[ERROR] Database connection error: " + exception.getMessage());
+            LOGGER.log(Level.SEVERE,
+                    "Failed to check existence of friendship " + userId1 + "-" + userId2, exception);
             return false;
         }
     }
