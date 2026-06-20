@@ -62,16 +62,16 @@
         <div class="card">
             <h2><span class="tag">removeUser</span> Remove user</h2>
             <p class="hint">Deletes the vertex and every incident edge (their friendships).</p>
-            <form method="post" action="${ctx}/social-network"
+            <form method="post" action="${ctx}/social-network" id="removeUserForm"
                   onsubmit="return confirm('Remove this user and all their friendships?');">
                 <input type="hidden" name="action" value="removeUser">
                 <label>User</label>
-                <select name="userId" required>
-                    <option value="" disabled selected>Select a user…</option>
-                    <c:forEach var="u" items="${users}">
-                        <option value="${u.id}">[${u.id}] <c:out value="${u.fullName}" /></option>
-                    </c:forEach>
-                </select>
+                <div class="search-wrapper">
+                    <input type="hidden" name="userId" id="rmUser-id">
+                    <input type="text" id="rmUser-search" class="search-input"
+                           placeholder="Search name or ID…" autocomplete="off">
+                    <ul class="search-dropdown" id="rmUser-dropdown" style="display:none;"></ul>
+                </div>
                 <button class="btn danger" type="submit">Remove user</button>
             </form>
         </div>
@@ -80,26 +80,26 @@
         <div class="card">
             <h2><span class="tag">addFriendship</span> Make friend</h2>
             <p class="hint">Adds an undirected edge between two distinct, existing users.</p>
-            <form method="post" action="${ctx}/social-network">
+            <form method="post" action="${ctx}/social-network" id="makeFriendForm">
                 <input type="hidden" name="action" value="makeFriend">
                 <div class="row">
                     <div>
                         <label>User A</label>
-                        <select name="userId1" required>
-                            <option value="" disabled selected>Select…</option>
-                            <c:forEach var="u" items="${users}">
-                                <option value="${u.id}">[${u.id}] <c:out value="${u.fullName}" /></option>
-                            </c:forEach>
-                        </select>
+                        <div class="search-wrapper">
+                            <input type="hidden" name="userId1" id="mfA-id">
+                            <input type="text" id="mfA-search" class="search-input"
+                                   placeholder="Search name or ID…" autocomplete="off">
+                            <ul class="search-dropdown" id="mfA-dropdown" style="display:none;"></ul>
+                        </div>
                     </div>
                     <div>
                         <label>User B</label>
-                        <select name="userId2" required>
-                            <option value="" disabled selected>Select…</option>
-                            <c:forEach var="u" items="${users}">
-                                <option value="${u.id}">[${u.id}] <c:out value="${u.fullName}" /></option>
-                            </c:forEach>
-                        </select>
+                        <div class="search-wrapper">
+                            <input type="hidden" name="userId2" id="mfB-id">
+                            <input type="text" id="mfB-search" class="search-input"
+                                   placeholder="Pick User A first…" autocomplete="off">
+                            <ul class="search-dropdown" id="mfB-dropdown" style="display:none;"></ul>
+                        </div>
                     </div>
                 </div>
                 <button class="btn primary" type="submit">Connect</button>
@@ -110,93 +110,47 @@
         <div class="card">
             <h2><span class="tag">removeFriendship</span> Unfriend</h2>
             <p class="hint">Removes the undirected edge between two users.</p>
-            <form method="post" action="${ctx}/social-network">
+            <form method="post" action="${ctx}/social-network" id="unfriendForm">
                 <input type="hidden" name="action" value="unfriend">
                 <div class="row">
                     <div>
                         <label>User A</label>
-                        <select name="userId1" required>
-                            <option value="" disabled selected>Select…</option>
-                            <c:forEach var="u" items="${users}">
-                                <option value="${u.id}">[${u.id}] <c:out value="${u.fullName}" /></option>
-                            </c:forEach>
-                        </select>
+                        <div class="search-wrapper">
+                            <input type="hidden" name="userId1" id="ufA-id">
+                            <input type="text" id="ufA-search" class="search-input"
+                                   placeholder="Search name or ID…" autocomplete="off">
+                            <ul class="search-dropdown" id="ufA-dropdown" style="display:none;"></ul>
+                        </div>
                     </div>
                     <div>
                         <label>User B</label>
-                        <select name="userId2" required>
-                            <option value="" disabled selected>Select…</option>
-                            <c:forEach var="u" items="${users}">
-                                <option value="${u.id}">[${u.id}] <c:out value="${u.fullName}" /></option>
-                            </c:forEach>
-                        </select>
+                        <div class="search-wrapper">
+                            <input type="hidden" name="userId2" id="ufB-id">
+                            <input type="text" id="ufB-search" class="search-input"
+                                   placeholder="Pick User A first…" autocomplete="off">
+                            <ul class="search-dropdown" id="ufB-dropdown" style="display:none;"></ul>
+                        </div>
                     </div>
                 </div>
                 <button class="btn secondary" type="submit">Unfriend</button>
             </form>
         </div>
     </div>
-
-    <div class="grid cols-2" style="margin-top:20px;">
-        <!-- Users table -->
-        <div class="card">
-            <h2>Users <span class="tag">vertices</span></h2>
-            <p class="hint">All registered users, ordered by insertion.</p>
-            <table>
-                <thead><tr><th>ID</th><th>Full name</th><th>Degree</th></tr></thead>
-                <tbody>
-                    <c:choose>
-                        <c:when test="${empty users}">
-                            <tr><td colspan="3" class="empty">No users yet — register one above.</td></tr>
-                        </c:when>
-                        <c:otherwise>
-                            <c:forEach var="u" items="${users}">
-                                <tr>
-                                    <td><span class="id-pill">${u.id}</span></td>
-                                    <td><c:out value="${u.fullName}" /></td>
-                                    <td>${relationships[u.id].size()}</td>
-                                </tr>
-                            </c:forEach>
-                        </c:otherwise>
-                    </c:choose>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Adjacency list -->
-        <div class="card">
-            <h2>Adjacency list <span class="tag">Graph</span></h2>
-            <p class="hint">The raw representation behind every algorithm: each user mapped to its
-               neighbour list.</p>
-            <div class="adj">
-                <c:choose>
-                    <c:when test="${empty users}">
-                        <span class="none">Graph is empty.</span>
-                    </c:when>
-                    <c:otherwise>
-                        <c:forEach var="u" items="${users}">
-                            <div>
-                                <span class="node">[${u.id}]&nbsp;<c:out value="${u.fullName}" /></span>
-                                <span class="arrow">→</span>
-                                <c:choose>
-                                    <c:when test="${empty relationships[u.id]}">
-                                        <span class="none">∅</span>
-                                    </c:when>
-                                    <c:otherwise>
-                                        <c:forEach var="fid" items="${relationships[u.id]}" varStatus="st">
-                                            <span class="nb">[${fid}]</span><c:if test="${not st.last}"><span class="arrow">·</span></c:if>
-                                        </c:forEach>
-                                    </c:otherwise>
-                                </c:choose>
-                            </div>
-                        </c:forEach>
-                    </c:otherwise>
-                </c:choose>
-            </div>
-        </div>
-    </div>
 </div>
 
 <footer class="app">BookFace Admin &middot; MVC-2 single controller &middot; Tomcat 9 / Java EE 7</footer>
+<script>
+  window.ADMIN_DATA = {
+    users: [
+      <c:forEach var="u" items="${users}">{ id: ${u.id}, name: "<c:out value="${u.fullName}" />" },
+      </c:forEach>
+    ],
+    friends: {
+      <c:forEach var="e" items="${relationships}">"${e.key}": [<c:forEach var="m" items="${e.value}" varStatus="ms">${m}<c:if test="${not ms.last}">, </c:if></c:forEach>],
+      </c:forEach>
+    }
+  };
+</script>
+<script src="${ctx}/js/admin.js"></script>
 </body>
 </html>

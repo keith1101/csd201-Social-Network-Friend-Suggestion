@@ -8,6 +8,82 @@
 (function () {
     "use strict";
 
+    // GRAPH is injected inline by dashboard.jsp (window.GRAPH). Declare it
+    // explicitly here so the dependency is visible and a missing/empty inline
+    // block degrades gracefully instead of throwing "GRAPH is not defined".
+    const GRAPH = window.GRAPH || {
+        nodes: [], links: [], selectedId: null,
+        directFriends: [], suggestions: [], mutualsBySuggested: {}
+    };
+
+    // ============================================================
+    //  Focus user search
+    // ============================================================
+    const searchInput = document.getElementById("focusUserSearch");
+    const dropdown = document.getElementById("focusUserDropdown");
+    const hiddenUserId = document.getElementById("selectedUserId");
+    const focusUserForm = document.getElementById("focusUserForm");
+
+    // Populate search dropdown with user names
+    function updateSearchDropdown(query) {
+        const q = query.trim().toLowerCase();
+        const userList = document.querySelectorAll("#focusUserDropdown li");
+        let visibleCount = 0;
+
+        userList.forEach(li => {
+            const searchText = li.getAttribute("data-search");
+            const match = searchText.indexOf(q) !== -1;
+            li.style.display = match ? "" : "none";
+            if (match) visibleCount++;
+        });
+
+        dropdown.style.display = q.length > 0 && visibleCount > 0 ? "" : "none";
+    }
+
+    if (searchInput) {
+        // Build initial dropdown list
+        GRAPH.nodes.forEach(u => {
+            const li = document.createElement("li");
+            li.setAttribute("data-search", `${u.name.toLowerCase()} ${u.id}`);
+            li.innerHTML = `<strong>[${u.id}]</strong> ${escapeHtml(u.name)}`;
+            li.addEventListener("click", () => {
+                hiddenUserId.value = u.id;
+                searchInput.value = `[${u.id}] ${u.name}`;
+                dropdown.style.display = "none";
+                focusUserForm.submit();
+            });
+            dropdown.appendChild(li);
+        });
+
+        // Update dropdown on input
+        searchInput.addEventListener("input", (e) => updateSearchDropdown(e.target.value));
+        searchInput.addEventListener("focus", (e) => {
+            if (e.target.value.length > 0) {
+                updateSearchDropdown(e.target.value);
+            }
+        });
+
+        // Set initial search value if user is selected
+        if (GRAPH.selectedId !== null) {
+            const selectedNode = GRAPH.nodes.find(n => n.id === GRAPH.selectedId);
+            const selectedName = selectedNode ? selectedNode.name : "";
+            searchInput.value = `[${GRAPH.selectedId}] ${selectedName}`;
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener("click", (e) => {
+            if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.style.display = "none";
+            }
+        });
+    }
+
+    function escapeHtml(s) {
+        return String(s == null ? "" : s)
+            .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
     const COLORS = {
         selected:   "#1877f2",
         friend:     "#42b72a",
@@ -55,22 +131,11 @@
     const nid = (e) => (e && typeof e === "object") ? e.id : e;
     const edgeKey = (a, b) => (a < b ? a + "-" + b : b + "-" + a);
 
-    // For each suggestion, the set of edges along selected → mutual → suggested.
+    // highlightEdges/highlightNodes are populated AFTER the rendered graph is
+    // known (see buildHighlightSets below), so the glow can only ever light up
+    // bridges/edges that are actually drawn and linked back to the focus user.
     const highlightEdges = {};   // sid -> Set(edgeKey)
     const highlightNodes = {};   // sid -> Set(id)
-    Object.keys(mutuals).forEach(k => {
-        const sid = Number(k);
-        const ms = mutuals[k] || [];
-        const eset = new Set();
-        const nset = new Set([selectedId, sid]);
-        ms.forEach(m => {
-            nset.add(m);
-            eset.add(edgeKey(selectedId, m));
-            eset.add(edgeKey(m, sid));
-        });
-        highlightEdges[sid] = eset;
-        highlightNodes[sid] = nset;
-    });
 
     // ============================================================
     //  D3 force simulation
@@ -84,18 +149,109 @@
 
     const root = svg.append("g");
 
-    svg.call(d3.zoom()
+    const zoomBehavior = d3.zoom()
         .scaleExtent([0.3, 4])
-        .on("zoom", (event) => root.attr("transform", event.transform)));
+        .on("zoom", (event) => root.attr("transform", event.transform));
+    svg.call(zoomBehavior);
 
-    // Deep-copy links so the simulation can replace ids with node refs.
-    const links = GRAPH.links.map(l => Object.assign({}, l));
-    const nodes = GRAPH.nodes.map(n => Object.assign({}, n));
+    // ============================================================
+    //  Focused view = clean depth-2 "why" graph (not the whole graph)
+    // ============================================================
+    // When a user is focused we render ONLY a tidy two-level structure:
+    //   focus user (centre)
+    //     → mutual-friend "bridges"  (spokes — every shown friend links to focus)
+    //         → suggestions          (outer ring, justified by their bridges)
+    // ONLY two kinds of edges are drawn: focus→bridge and bridge→suggestion.
+    // Friend↔friend and suggestion↔suggestion edges are deliberately omitted so
+    // nothing trails off into chains that aren't anchored to the focus user.
+    // This guarantees every rendered node connects back to the focus user.
+    const MAX_BRIDGES = 5; // max bridges drawn per suggestion (keeps it readable)
+
+    function buildEgoGraph() {
+        const links = [];
+        const usedBridges = new Set();
+        const shownSuggestions = new Set();
+
+        suggestionMap.forEach((_, sid) => {
+            // Valid bridges = mutual friends that really are direct friends of
+            // the focus user. Cap per suggestion so no suggestion fans out wide.
+            const bridges = (mutuals[sid] || []).filter(m => directSet.has(m));
+            bridges.slice(0, MAX_BRIDGES).forEach(m => {
+                links.push({ source: m, target: sid });
+                usedBridges.add(m);
+                shownSuggestions.add(sid);
+            });
+        });
+
+        // Spoke from the focus user to every bridge actually used — this is what
+        // anchors each shown friend (and, through it, each suggestion) to focus.
+        usedBridges.forEach(m => links.push({ source: selectedId, target: m }));
+
+        const keep = new Set([selectedId]);
+        usedBridges.forEach(id => keep.add(id));
+        shownSuggestions.forEach(id => keep.add(id));
+
+        return {
+            nodes: GRAPH.nodes.filter(n => keep.has(n.id)).map(n => Object.assign({}, n)),
+            links: links
+        };
+    }
+
+    const graphData = (selectedId !== null) ? buildEgoGraph() : {
+        nodes: GRAPH.nodes.map(n => Object.assign({}, n)),
+        links: GRAPH.links.map(l => Object.assign({}, l))
+    };
+
+    // Deep-copied so the simulation can replace ids with node refs.
+    const links = graphData.links;
+    const nodes = graphData.nodes;
+
+    // Populate the highlight sets from the edges that are ACTUALLY rendered.
+    // For each suggestion, a mutual friend m only glows when BOTH the
+    // focus→m and m→suggestion edges survive in the drawn graph — so the glow
+    // always traces a real, connected path back to the focus user (no orphan
+    // friends lighting up, no broken links).
+    (function buildHighlightSets() {
+        const rendered = new Set(links.map(l => edgeKey(nid(l.source), nid(l.target))));
+        Object.keys(mutuals).forEach(k => {
+            const sid = Number(k);
+            const eset = new Set();
+            const nset = new Set([selectedId, sid]);
+            (mutuals[k] || []).forEach(m => {
+                const keyToFocus = edgeKey(selectedId, m);
+                const keyToSugg = edgeKey(m, sid);
+                if (rendered.has(keyToFocus) && rendered.has(keyToSugg)) {
+                    nset.add(m);
+                    eset.add(keyToFocus);
+                    eset.add(keyToSugg);
+                }
+            });
+            highlightEdges[sid] = eset;
+            highlightNodes[sid] = nset;
+        });
+    })();
+
+    // Seed positions across a filled DISC (radius = sqrt(rand) for uniform area)
+    // rather than a thin ring — a ring is a stable equilibrium that leaves the
+    // centre permanently empty.
+    const seedR = Math.min(width, height) * 0.4;
+    nodes.forEach(n => {
+        const angle = Math.random() * 2 * Math.PI;
+        const radius = Math.sqrt(Math.random()) * seedR;
+        n.x = width / 2 + radius * Math.cos(angle);
+        n.y = height / 2 + radius * Math.sin(angle);
+    });
 
     const simulation = d3.forceSimulation(nodes)
+        .alpha(0.5)
+        .alphaDecay(0.0228)
         .force("link", d3.forceLink(links).id(d => d.id).distance(70).strength(0.25))
         .force("charge", d3.forceManyBody().strength(-260))
         .force("center", d3.forceCenter(width / 2, height / 2))
+        // Mild per-node pull toward centre breaks the empty-ring equilibrium and
+        // fills the middle (forceCenter alone only re-centres the centroid).
+        .force("x", d3.forceX(width / 2).strength(0.06))
+        .force("y", d3.forceY(height / 2).strength(0.06))
         .force("collide", d3.forceCollide().radius(d => radiusOf(d.id) + 6));
 
     const link = root.append("g")
@@ -137,6 +293,68 @@
             .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
         node.attr("transform", d => `translate(${d.x},${d.y})`);
     });
+
+    // Pan/zoom the camera so the given node ids are centered and fully framed.
+    function fitView(targetIds) {
+        // Re-measure at call time; fall back to the seed dims, then a sane default,
+        // so a stale/zero initial measurement can never break the fit.
+        const vw = container.clientWidth || width || 600;
+        const vh = container.clientHeight || height || 620;
+
+        // Bounding box of the target nodes' settled positions.
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        nodes.forEach(n => {
+            if (targetIds.has(n.id)) {
+                minX = Math.min(minX, n.x);
+                maxX = Math.max(maxX, n.x);
+                minY = Math.min(minY, n.y);
+                maxY = Math.max(maxY, n.y);
+            }
+        });
+
+        // Nothing to frame (empty target / empty graph) → leave the view alone.
+        if (minX === Infinity) return;
+
+        const bbox = {
+            x: minX, y: minY,
+            width: maxX - minX || 1,   // single point → avoid divide-by-zero
+            height: maxY - minY || 1
+        };
+
+        // Fit the bbox with ~30% padding, clamped to the zoom scaleExtent.
+        const padding = 0.3;
+        const paddedWidth = bbox.width * (1 + padding);
+        const paddedHeight = bbox.height * (1 + padding);
+        const scale = Math.min(vw / paddedWidth, vh / paddedHeight);
+        const clampedScale = Math.max(0.3, Math.min(scale, 4));
+
+        // Center the bbox midpoint in the viewport.
+        const centerX = bbox.x + bbox.width / 2;
+        const centerY = bbox.y + bbox.height / 2;
+        const tx = vw / 2 - centerX * clampedScale;
+        const ty = vh / 2 - centerY * clampedScale;
+
+        const transform = d3.zoomIdentity.translate(tx, ty).scale(clampedScale);
+        svg.transition().duration(500).call(zoomBehavior.transform, transform);
+    }
+
+    // Fit the focused neighbourhood when a user is selected, otherwise the whole graph.
+    function autoFit() {
+        const targetIds = new Set();
+        if (selectedId !== null) {
+            targetIds.add(selectedId);
+            directSet.forEach(id => targetIds.add(id));
+            suggestionMap.forEach((_, id) => targetIds.add(id));
+        } else {
+            nodes.forEach(n => targetIds.add(n.id));
+        }
+        fitView(targetIds);
+    }
+
+    // Re-fit precisely once the layout settles, plus an early fallback so the
+    // camera never sits idle on a blank frame while alpha decays.
+    simulation.on("end", autoFit);
+    setTimeout(autoFit, 600);
 
     function drag(sim) {
         return d3.drag()
@@ -231,11 +449,5 @@
         document.querySelectorAll("#ranklist li").forEach(li => {
             li.classList.toggle("active", sid !== null && Number(li.dataset.sid) === sid);
         });
-    }
-
-    function escapeHtml(s) {
-        return String(s == null ? "" : s)
-            .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
 })();
