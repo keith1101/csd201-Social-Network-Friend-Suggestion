@@ -21,16 +21,13 @@
             <p>A force-directed view of the friendship graph. Pick a user to see how
                <code>suggestFriends()</code> ranks non-friends by shared connections.</p>
         </div>
-        <form method="get" action="${ctx}/social-network" class="user-picker">
+        <form method="get" action="${ctx}/social-network" class="user-picker" id="focusUserForm">
             <input type="hidden" name="action" value="dashboard">
-            <select name="userId" onchange="this.form.submit()">
-                <option value="" disabled ${empty selectedUserId ? 'selected' : ''}>Focus user…</option>
-                <c:forEach var="u" items="${users}">
-                    <option value="${u.id}" ${u.id == selectedUserId ? 'selected' : ''}>
-                        [${u.id}] <c:out value="${u.fullName}" />
-                    </option>
-                </c:forEach>
-            </select>
+            <input type="hidden" name="userId" id="selectedUserId" value="${empty selectedUserId ? '' : selectedUserId}">
+            <div class="search-wrapper">
+                <input type="text" id="focusUserSearch" class="search-input" placeholder="Search for focus user…" autocomplete="off">
+                <ul class="search-dropdown" id="focusUserDropdown" style="display: none;"></ul>
+            </div>
         </form>
     </div>
 
@@ -91,7 +88,7 @@
      dashboard.js can drive the D3 simulation directly.
      ============================================================ --%>
 <script>
-  const GRAPH = {
+  window.GRAPH = {
     nodes: [
       <c:forEach var="u" items="${users}">{ id: ${u.id}, name: "${u.fullName}" },
       </c:forEach>
@@ -104,7 +101,7 @@
         </c:forEach>
       </c:forEach>
     ],
-    selectedId: ${empty selectedUserId ? 'null' : selectedUserId},
+    selectedId: <c:choose><c:when test="${empty selectedUserId}">null</c:when><c:otherwise>${selectedUserId}</c:otherwise></c:choose>,
     directFriends: [
       <c:if test="${not empty selectedUserId}">
         <c:forEach var="fid" items="${relationships[selectedUserId]}">${fid}, </c:forEach>

@@ -161,6 +161,9 @@ input:focus, select:focus {
 .btn.slim { width: auto; margin-top: 0; padding: 7px 14px; font-size: 13px; }
 
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+/* Let two searchable pickers sit side-by-side in a .row without overflowing
+   (the wrapper's default min-width:280px would otherwise blow out the column). */
+.row .search-wrapper { min-width: 0; width: 100%; }
 
 /* ---------- Banners ---------- */
 .banner {
@@ -272,6 +275,23 @@ footer.app {
    ============================================================ */
 .dash-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; }
 .user-picker select { min-width: 220px; }
+.user-picker { position: relative; }
+.search-wrapper { position: relative; min-width: 280px; }
+.search-wrapper .search-input { margin-bottom: 0; }
+.search-dropdown {
+    position: absolute; top: 100%; left: 0; right: 0;
+    list-style: none; margin: 4px 0 0; padding: 0;
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    max-height: 320px; overflow-y: auto; z-index: 100;
+}
+.search-dropdown li {
+    padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border-2);
+    transition: background 0.12s;
+}
+.search-dropdown li:last-child { border-bottom: none; }
+.search-dropdown li:hover { background: #f5f6f7; }
+.search-dropdown li.selected { background: #e7f0ff; color: var(--blue); font-weight: 600; }
 
 .dash-grid {
     display: grid; grid-template-columns: 1fr 360px; gap: 16px; align-items: start;

@@ -27,17 +27,14 @@
     </div>
 
     <div class="card pick-card">
-        <form method="get" action="${ctx}/social-network" class="pick-form">
+        <form method="get" action="${ctx}/social-network" class="pick-form" id="viewingAsForm">
             <input type="hidden" name="action" value="user">
+            <input type="hidden" name="userId" id="viewingAsUserId" value="${empty selectedUserId ? '' : selectedUserId}">
             <label>Viewing as</label>
-            <select name="userId" onchange="this.form.submit()" required>
-                <option value="" disabled ${empty selectedUserId ? 'selected' : ''}>Choose a profile…</option>
-                <c:forEach var="u" items="${users}">
-                    <option value="${u.id}" ${u.id == selectedUserId ? 'selected' : ''}>
-                        [${u.id}] <c:out value="${u.fullName}" />
-                    </option>
-                </c:forEach>
-            </select>
+            <div class="search-wrapper">
+                <input type="text" id="viewingAsSearch" class="search-input" placeholder="Search for a profile…" autocomplete="off">
+                <ul class="search-dropdown" id="viewingAsDropdown" style="display: none;"></ul>
+            </div>
         </form>
     </div>
 
@@ -174,6 +171,12 @@
 </div>
 
 <footer class="app">BookFace · server-rendered JSP/JSTL · adjacency list + max-heap suggestions</footer>
+<script>
+  const USERS = [
+    <c:forEach var="u" items="${users}">{ id: ${u.id}, fullName: "<c:out value="${u.fullName}" />" },
+    </c:forEach>
+  ];
+</script>
 <script src="${pageContext.request.contextPath}/js/friend-search.js"></script>
 </body>
 </html>
