@@ -1,4 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project-private xmlns="http://www.netbeans.org/ns/project-private/1">
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
+    <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
+        <group>
+            <file>file:/D:/OneDrive/Desktop/csd201/csd201-Social-Network-Friend-Suggestion/web/js/dashboard.js</file>
+            <file>file:/D:/OneDrive/Desktop/csd201/csd201-Social-Network-Friend-Suggestion/web/WEB-INF/views/_nav.jspf</file>
+            <file>file:/D:/OneDrive/Desktop/csd201/csd201-Social-Network-Friend-Suggestion/src/java/utils/PerformanceProfiler.java</file>
+            <file>file:/D:/OneDrive/Desktop/csd201/csd201-Social-Network-Friend-Suggestion/src/java/model/SocialGraphDAO.java</file>
+            <file>file:/D:/OneDrive/Desktop/csd201/csd201-Social-Network-Friend-Suggestion/src/java/utils/TextUtils.java</file>
+            <file>file:/D:/OneDrive/Desktop/csd201/csd201-Social-Network-Friend-Suggestion/src/java/model/SuggestedFriend.java</file>
+            <file>file:/D:/OneDrive/Desktop/csd201/csd201-Social-Network-Friend-Suggestion/web/index.jsp</file>
+            <file>file:/D:/OneDrive/Desktop/csd201/csd201-Social-Network-Friend-Suggestion/src/java/utils/DataGenerator.java</file>
+            <file>file:/D:/OneDrive/Desktop/csd201/csd201-Social-Network-Friend-Suggestion/src/java/model/User.java</file>
+            <file>file:/D:/OneDrive/Desktop/csd201/csd201-Social-Network-Friend-Suggestion/web/css/style.css</file>
+            <file>file:/D:/OneDrive/Desktop/csd201/csd201-Social-Network-Friend-Suggestion/src/java/controller/SocialNetworkController.java</file>
+            <file>file:/D:/OneDrive/Desktop/csd201/csd201-Social-Network-Friend-Suggestion/src/java/model/MyMaxHeap.java</file>
+            <file>file:/D:/OneDrive/Desktop/csd201/csd201-Social-Network-Friend-Suggestion/src/java/utils/Input.java</file>
+            <file>file:/D:/OneDrive/Desktop/csd201/csd201-Social-Network-Friend-Suggestion/src/java/utils/Validator.java</file>
+            <file>file:/D:/OneDrive/Desktop/csd201/csd201-Social-Network-Friend-Suggestion/web/WEB-INF/views/user.jsp</file>
+            <file>file:/D:/OneDrive/Desktop/csd201/csd201-Social-Network-Friend-Suggestion/web/WEB-INF/views/admin.jsp</file>
+        </group>
+    </open-files>
 </project-private>
