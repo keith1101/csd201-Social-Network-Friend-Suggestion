@@ -2,11 +2,6 @@
 <project-private xmlns="http://www.netbeans.org/ns/project-private/1">
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
-        <group>
-            <file>file:/D:/csd201-Social-Network-Friend-Suggestion/web/WEB-INF/views/dashboard.jsp</file>
-            <file>file:/D:/csd201-Social-Network-Friend-Suggestion/web/js/dashboard.js</file>
-            <file>file:/D:/csd201-Social-Network-Friend-Suggestion/web/js/friend-search.js</file>
-            <file>file:/D:/csd201-Social-Network-Friend-Suggestion/web/WEB-INF/views/admin.jsp</file>
-        </group>
+        <group/>
     </open-files>
 </project-private>
