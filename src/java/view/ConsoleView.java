@@ -60,6 +60,7 @@ public class ConsoleView {
         }
     }
 
+
     public static void displayUserList(ArrayList<User> users) {
         System.out.println();
         System.out.println("User List");
@@ -115,7 +116,6 @@ public class ConsoleView {
             System.out.println();
         }
     }
-
     public static void displaySuggestedFriends(ArrayList<SuggestedFriend> result) {
         System.out.println();
         System.out.println("Suggested Friends");
@@ -137,3 +137,5 @@ public class ConsoleView {
         System.out.println(message);
     }
 }
+
+
