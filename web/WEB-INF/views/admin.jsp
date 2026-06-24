@@ -13,16 +13,6 @@
 <%@ include file="_nav.jspf" %>
 <c:set var="ctx" value="${pageContext.request.contextPath}" />
 
-<%-- Degree sum (directed) and undirected edge count, kept as integers --%>
-<c:set var="degreeSum" value="0" />
-<c:set var="edges" value="0" />
-<c:forEach var="entry" items="${relationships}">
-    <c:set var="degreeSum" value="${degreeSum + entry.value.size()}" />
-    <c:forEach var="fid" items="${entry.value}">
-        <c:if test="${fid > entry.key}"><c:set var="edges" value="${edges + 1}" /></c:if>
-    </c:forEach>
-</c:forEach>
-
 <div class="container">
     <div class="page-head">
         <h1>Admin Console</h1>
@@ -36,13 +26,55 @@
     <c:if test="${not empty error}">
         <div class="banner error"><span><c:out value="${error}" /></span></div>
     </c:if>
-
     <div class="stats">
-        <div class="stat a"><div class="n">${users.size()}</div><div class="l">Users (vertices)</div></div>
-        <div class="stat d"><div class="n">${edges}</div><div class="l">Friendships (edges)</div></div>
+        <div class="stat a"><div class="n">${totalUsers}</div><div class="l">Users (vertices)</div></div>
+        <div class="stat d"><div class="n">${totalFriendships}</div><div class="l">Friendships (edges)</div></div>
         <div class="stat b"><div class="n">${degreeSum}</div><div class="l">Directed degree sum</div></div>
     </div>
 
+    <div class="card">
+        <h2><span class="tag">browse</span> Paginated users</h2>
+        <p class="hint">Showing users ${pageStart} to ${pageEnd} of ${totalUsers}. The admin pickers only load this page and its direct friends so the console stays responsive.</p>
+        <ul class="people scroll">
+            <c:choose>
+                <c:when test="${not empty pageUsers}">
+                    <c:forEach var="u" items="${pageUsers}">
+                        <li>
+                            <div class="ava sm">${u.id}</div>
+                            <div class="who">
+                                <c:out value="${u.fullName}" />
+                                <small>ID ${u.id}</small>
+                            </div>
+                        </li>
+                    </c:forEach>
+                </c:when>
+                <c:otherwise>
+                    <li class="empty">No users on this page.</li>
+                </c:otherwise>
+            </c:choose>
+        </ul>
+        <div class="pager">
+            <div class="pager-meta">Page ${currentPage} of ${totalPages}</div>
+            <div class="pager-controls">
+                <c:choose>
+                    <c:when test="${currentPage > 1}">
+                        <a class="btn slim ghost" href="${ctx}/social-network?action=admin&amp;page=${currentPage - 1}&amp;pageSize=${pageSize}">Previous</a>
+                    </c:when>
+                    <c:otherwise>
+                        <span class="btn slim ghost disabled" aria-disabled="true">Previous</span>
+                    </c:otherwise>
+                </c:choose>
+                <c:choose>
+                    <c:when test="${currentPage < totalPages}">
+                        <a class="btn slim ghost" href="${ctx}/social-network?action=admin&amp;page=${currentPage + 1}&amp;pageSize=${pageSize}">Next</a>
+                    </c:when>
+                    <c:otherwise>
+                        <span class="btn slim ghost disabled" aria-disabled="true">Next</span>
+                    </c:otherwise>
+                </c:choose>
+            </div>
+        </div>
+    </div>
     <div class="grid cols-2">
         <!-- Register -->
         <div class="card">
@@ -69,7 +101,7 @@
                 <div class="search-wrapper">
                     <input type="hidden" name="userId" id="rmUser-id">
                     <input type="text" id="rmUser-search" class="search-input"
-                           placeholder="Search name or ID…" autocomplete="off">
+                           placeholder="Search name or ID..." autocomplete="off">
                     <ul class="search-dropdown" id="rmUser-dropdown" style="display:none;"></ul>
                 </div>
                 <button class="btn danger" type="submit">Remove user</button>
@@ -88,7 +120,7 @@
                         <div class="search-wrapper">
                             <input type="hidden" name="userId1" id="mfA-id">
                             <input type="text" id="mfA-search" class="search-input"
-                                   placeholder="Search name or ID…" autocomplete="off">
+                           placeholder="Search name or ID..." autocomplete="off">
                             <ul class="search-dropdown" id="mfA-dropdown" style="display:none;"></ul>
                         </div>
                     </div>
@@ -97,7 +129,7 @@
                         <div class="search-wrapper">
                             <input type="hidden" name="userId2" id="mfB-id">
                             <input type="text" id="mfB-search" class="search-input"
-                                   placeholder="Pick User A first…" autocomplete="off">
+                                   placeholder="Pick User A first..." autocomplete="off">
                             <ul class="search-dropdown" id="mfB-dropdown" style="display:none;"></ul>
                         </div>
                     </div>
@@ -118,7 +150,7 @@
                         <div class="search-wrapper">
                             <input type="hidden" name="userId1" id="ufA-id">
                             <input type="text" id="ufA-search" class="search-input"
-                                   placeholder="Search name or ID…" autocomplete="off">
+                           placeholder="Search name or ID..." autocomplete="off">
                             <ul class="search-dropdown" id="ufA-dropdown" style="display:none;"></ul>
                         </div>
                     </div>
@@ -127,7 +159,7 @@
                         <div class="search-wrapper">
                             <input type="hidden" name="userId2" id="ufB-id">
                             <input type="text" id="ufB-search" class="search-input"
-                                   placeholder="Pick User A first…" autocomplete="off">
+                                   placeholder="Pick User A first..." autocomplete="off">
                             <ul class="search-dropdown" id="ufB-dropdown" style="display:none;"></ul>
                         </div>
                     </div>
