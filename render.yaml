@@ -1,0 +1,5 @@
+services:
+  - type: web
+    name: java-ant-tomcat9-app
+    runtime: docker
+    plan: free # Sử dụng gói miễn phí của Render

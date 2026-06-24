@@ -63,7 +63,14 @@ public class SocialGraphDAO {
     private final String connectionString;
 
     public SocialGraphDAO() {
-        this.connectionString = "jdbc:sqlserver://localhost:1433;databaseName=" + DB_NAME;
+        String dbUrl = System.getenv("DB_URL");
+
+        if (dbUrl == null) {
+            this.connectionString = "jdbc:sqlserver://localhost:1433;databaseName=" + DB_NAME;
+        } else {
+            this.connectionString = dbUrl;
+        }
+
     }
 
     public static final class SuggestionBundle {
