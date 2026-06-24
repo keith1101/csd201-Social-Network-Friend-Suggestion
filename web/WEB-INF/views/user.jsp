@@ -23,7 +23,7 @@
 <div class="container">
     <div class="page-head">
         <h1>Find friends</h1>
-        <p>Pick a profile to manage its connections and see who BookFace suggests — ranked by mutual friends.</p>
+        <p>Pick a profile to manage its connections and see who BookFace suggests - ranked by mutual friends.</p>
     </div>
 
     <div class="card pick-card">
@@ -32,7 +32,7 @@
             <input type="hidden" name="userId" id="viewingAsUserId" value="${empty selectedUserId ? '' : selectedUserId}">
             <label>Viewing as</label>
             <div class="search-wrapper">
-                <input type="text" id="viewingAsSearch" class="search-input" placeholder="Search for a profile…" autocomplete="off">
+                <input type="text" id="viewingAsSearch" class="search-input" placeholder="Search for a profile..." autocomplete="off">
                 <ul class="search-dropdown" id="viewingAsDropdown" style="display: none;"></ul>
             </div>
         </form>
@@ -51,9 +51,8 @@
             <div class="avatar"><c:out value="${fn:toUpperCase(fn:substring(selectedName, 0, 1))}" /></div>
             <div class="profile-meta">
                 <h2><c:out value="${selectedName}" /></h2>
-                <p>User ID ${selectedUserId} · ${relationships[selectedUserId].size()} friend<c:if test="${relationships[selectedUserId].size() != 1}">s</c:if></p>
+                <p>User ID ${selectedUserId} &middot; ${relationships[selectedUserId].size()} friend<c:if test="${relationships[selectedUserId].size() != 1}">s</c:if></p>
             </div>
-            <a class="btn ghost slim" href="${ctx}/social-network?action=dashboard&userId=${selectedUserId}">Open dashboard</a>
         </div>
 
         <div class="grid cols-2">
@@ -63,11 +62,11 @@
                 <p class="hint">People <c:out value="${selectedName}" /> is connected to.</p>
                 <c:choose>
                     <c:when test="${empty relationships[selectedUserId]}">
-                        <p class="empty">No friends yet — add some on the right.</p>
+                        <p class="empty">No friends yet - add some on the right.</p>
                     </c:when>
                     <c:otherwise>
                         <input type="text" id="friends-search" class="search-input"
-                               placeholder="Search your friends…" autocomplete="off"
+                               placeholder="Search your friends..." autocomplete="off"
                                oninput="filterFriendList(this.value)">
                         <ul class="people scroll" id="friends-list">
                             <c:forEach var="fid" items="${relationships[selectedUserId]}">
@@ -96,10 +95,10 @@
             <!-- Add friend (search, not a dropdown) -->
             <div class="card">
                 <h2>Add a friend</h2>
-                <p class="hint">Search by name or ID — only people who aren’t already friends are listed.</p>
+                <p class="hint">Search by name or ID - only people who aren't already friends are listed.</p>
 
                 <input type="text" id="friend-search" class="search-input"
-                       placeholder="Search people…" autocomplete="off"
+                       placeholder="Search people..." autocomplete="off"
                        oninput="filterFriendCandidates(this.value)">
 
                 <c:set var="candidateCount" value="0" />
@@ -129,7 +128,7 @@
                     </c:forEach>
                 </ul>
                 <c:if test="${candidateCount == 0}">
-                    <p class="empty">No one left to add — everyone is already a friend.</p>
+                    <p class="empty">No one left to add - everyone is already a friend.</p>
                 </c:if>
                 <p class="empty" id="friend-no-match" style="display:none;">No one matches that search.</p>
             </div>
@@ -141,7 +140,7 @@
             <p class="hint">Non-friends ranked by mutual-friend count (max-heap, top 5). One click to connect.</p>
             <c:choose>
                 <c:when test="${empty suggestions}">
-                    <p class="empty">No suggestions yet — not enough mutual connections.</p>
+                    <p class="empty">No suggestions yet - not enough mutual connections.</p>
                 </c:when>
                 <c:otherwise>
                     <div class="suggest-grid">
@@ -170,7 +169,7 @@
     </c:if>
 </div>
 
-<footer class="app">BookFace · server-rendered JSP/JSTL · adjacency list + max-heap suggestions</footer>
+<footer class="app">BookFace &middot; server-rendered JSP/JSTL &middot; adjacency list + max-heap suggestions</footer>
 <script>
   const USERS = [
     <c:forEach var="u" items="${users}">{ id: ${u.id}, fullName: "<c:out value="${u.fullName}" />" },

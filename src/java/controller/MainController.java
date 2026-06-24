@@ -23,46 +23,41 @@ import utils.TextUtils;
 import utils.Validator;
 
 /**
- * Front controller (MVC Model-2) for the Social Network Friend-Suggestion web app.
+ * Front controller for the servlet UI.
  *
- * <p>A single servlet orchestrates the in-memory {@link Graph} (adjacency-list data
- * structure + BFS / mutual-friend / top-K heap algorithms) and the SQL Server
- * {@link SocialGraphDAO}. There is no JSON/REST layer: {@code doGet} populates request
- * attributes (the "data contract") and forwards to a JSP under {@code /WEB-INF/views};
- * {@code doPost} performs mutations using the Post-Redirect-Get pattern so a browser
- * refresh never repeats a write.</p>
- *
- * <p><b>Consistency rule:</b> every mutation writes to the database first, then mutates
- * the in-memory graph under {@link #graphLock}; if the graph step fails the database
- * change is rolled back (or the graph is reloaded) so the two never diverge.</p>
+ * <p>
+ * Users are cached in memory for fast pickers and list views. Friendship-heavy
+ * pages are queried on demand from SQL Server so startup does not preload the
+ * entire edge set into RAM.
+ * </p>
  */
-@WebServlet(name = "MainController", urlPatterns = {"/social-network"})
+@WebServlet(name = "MainController", urlPatterns = { "/social-network" })
 public class MainController extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
     private static final Logger LOGGER = Logger.getLogger(MainController.class.getName());
 
-    /** Number of friend suggestions surfaced per user (top-K of the max-heap). */
     private static final int DEFAULT_TOP_K = 5;
+    private static final int DEFAULT_ADMIN_PAGE_SIZE = 25;
+    private static final int MAX_ADMIN_PAGE_SIZE = 100;
 
-    /** Single shared DAO and graph for the whole application. */
     private SocialGraphDAO dao;
     private Graph graph;
 
-    /** Guards every read-snapshot and mutation of {@link #graph}. */
     private final Object graphLock = new Object();
 
     @Override
     public void init() throws ServletException {
         this.dao = new SocialGraphDAO();
+
         Graph loaded = dao.loadGraphFromDatabase();
         this.graph = (loaded != null) ? loaded : new Graph();
         LOGGER.log(Level.INFO, "MainController initialised with {0} users.",
-                graph.getVertices().size());
+                graph.getUserCount());
     }
 
     // ------------------------------------------------------------------
-    //  GET — read-only routing (admin / user / dashboard)
+    // GET - read-only routing (admin / user)
     // ------------------------------------------------------------------
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -82,14 +77,11 @@ public class MainController extends HttpServlet {
                 break;
 
             case "dashboard":
-                populateGraphSnapshot(request);
-                populateSelectedUser(request, request.getParameter("userId"));
-                forward(request, response, "dashboard");
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Dashboard is disabled.");
                 break;
-
             case "user":
-                populateGraphSnapshot(request);
-                populateSelectedUser(request, request.getParameter("userId"));
+                populateUsersSnapshot(request);
+                populateSelectedUser(request, request.getParameter("userId"), true);
                 forward(request, response, "user");
                 break;
 
@@ -100,7 +92,7 @@ public class MainController extends HttpServlet {
     }
 
     // ------------------------------------------------------------------
-    //  POST — mutations (Post-Redirect-Get)
+    // POST - mutations (Post-Redirect-Get)
     // ------------------------------------------------------------------
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -131,8 +123,6 @@ public class MainController extends HttpServlet {
                 return;
         }
 
-        // PRG: redirect so a browser refresh never re-submits. Forms on the User page
-        // carry returnUserId so the user stays on their own page; Admin forms omit it.
         String returnUserId = request.getParameter("returnUserId");
         String target = Validator.isValidId(returnUserId)
                 ? "/social-network?action=user&userId=" + returnUserId.trim()
@@ -141,7 +131,7 @@ public class MainController extends HttpServlet {
     }
 
     // ==================================================================
-    //  Mutation handlers — DB write first, then graph under graphLock.
+    // Mutation handlers - DB write first, then refresh the cache if needed.
     // ==================================================================
 
     private void registerUser(HttpServletRequest request) {
@@ -162,7 +152,7 @@ public class MainController extends HttpServlet {
         int userId = Integer.parseInt(rawId.trim());
 
         synchronized (graphLock) {
-            if (graph.searchUserById(userId) != null || dao.isUserExists(userId)) {
+            if (dao.isUserExists(userId)) {
                 flashError(request, "User ID " + userId + " already exists.");
                 return;
             }
@@ -174,8 +164,8 @@ public class MainController extends HttpServlet {
             }
 
             if (!graph.addUser(user)) {
-                dao.deleteUser(userId); // roll back the DB write
-                flashError(request, "Failed to add user to the social graph.");
+                reloadGraph();
+                flashMessage(request, "User registered in the database; graph cache refreshed.");
                 return;
             }
 
@@ -193,20 +183,19 @@ public class MainController extends HttpServlet {
         int userId = Integer.parseInt(rawId.trim());
 
         synchronized (graphLock) {
-            if (graph.searchUserById(userId) == null) {
+            if (!dao.isUserExists(userId)) {
                 flashError(request, "User [" + userId + "] does not exist.");
                 return;
             }
 
-            // DELETE drops the user and all their friendship rows in one go.
             if (!dao.deleteUser(userId)) {
                 flashError(request, "Failed to remove user from the database.");
                 return;
             }
 
             if (!graph.removeUser(userId)) {
-                reloadGraph(); // resync graph with the now-authoritative DB
-                flashMessage(request, "User removed from the database; graph reloaded.");
+                reloadGraph();
+                flashMessage(request, "User removed from the database; graph cache refreshed.");
                 return;
             }
 
@@ -227,12 +216,12 @@ public class MainController extends HttpServlet {
         int id2 = Integer.parseInt(rawId2.trim());
 
         synchronized (graphLock) {
-            if (graph.searchUserById(id1) == null || graph.searchUserById(id2) == null) {
+            if (!dao.isUserExists(id1) || !dao.isUserExists(id2)) {
                 flashError(request, "Both users must exist before creating a friendship.");
                 return;
             }
 
-            if (graph.isFriendshipExists(id1, id2) || dao.isFriendshipExists(id1, id2)) {
+            if (dao.isFriendshipExists(id1, id2)) {
                 flashError(request, "Users [" + id1 + "] and [" + id2 + "] are already friends.");
                 return;
             }
@@ -243,8 +232,8 @@ public class MainController extends HttpServlet {
             }
 
             if (!graph.addFriendship(id1, id2)) {
-                dao.deleteFriendship(id1, id2); // roll back the DB write
-                flashError(request, "Failed to add friendship to the social graph.");
+                reloadGraph();
+                flashMessage(request, "Friendship saved in the database; graph cache refreshed.");
                 return;
             }
 
@@ -265,7 +254,7 @@ public class MainController extends HttpServlet {
         int id2 = Integer.parseInt(rawId2.trim());
 
         synchronized (graphLock) {
-            if (!graph.isFriendshipExists(id1, id2)) {
+            if (!dao.isFriendshipExists(id1, id2)) {
                 flashError(request, "Friendship between [" + id1 + "] and [" + id2 + "] does not exist.");
                 return;
             }
@@ -277,7 +266,7 @@ public class MainController extends HttpServlet {
 
             if (!graph.removeFriendship(id1, id2)) {
                 reloadGraph();
-                flashMessage(request, "Friendship removed from the database; graph reloaded.");
+                flashMessage(request, "Friendship removed from the database; graph cache refreshed.");
                 return;
             }
 
@@ -286,58 +275,154 @@ public class MainController extends HttpServlet {
     }
 
     // ==================================================================
-    //  Data-contract builders (request attributes — no JSON)
+    // Data-contract builders - request attributes, no JSON.
     // ==================================================================
 
-    /**
-     * Sets {@code users} and {@code relationships} from a consistent snapshot of the
-     * graph. All collections are defensive copies so the JSP can never mutate state.
-     */
-    private void populateGraphSnapshot(HttpServletRequest request) {
+    private void populateUsersSnapshot(HttpServletRequest request) {
         synchronized (graphLock) {
-            request.setAttribute("users", new ArrayList<>(graph.getVertices()));
-            request.setAttribute("relationships", graph.getRelationshipGraph());
+            request.setAttribute("users", graph.getVertices());
         }
     }
 
     /**
-     * If {@code rawUserId} identifies a real user, sets {@code selectedUserId},
-     * {@code suggestions} (top-K from the max-heap) and {@code mutualsBySuggested}
-     * (suggestedId &rarr; mutual-friend IDs) — the data that lets the dashboard show
-     * <em>why</em> each suggestion was made.
+     * Sets a paginated user browser and page-scoped friendships for admin views.
      */
-    private void populateSelectedUser(HttpServletRequest request, String rawUserId) {
+    private void populateGraphSnapshot(HttpServletRequest request) {
+        int page = parsePositiveInt(request.getParameter("page"), 1);
+        int pageSize = parsePositiveInt(request.getParameter("pageSize"), DEFAULT_ADMIN_PAGE_SIZE);
+        pageSize = Math.max(1, Math.min(pageSize, MAX_ADMIN_PAGE_SIZE));
+
+        ArrayList<User> pageUsers;
+        int totalUsers;
+        int totalPages;
+        synchronized (graphLock) {
+            totalUsers = graph.getUserCount();
+            totalPages = Math.max(1, graph.getUserPageCount(pageSize));
+            if (page > totalPages) {
+                page = totalPages;
+            }
+            pageUsers = graph.getUsersPage(page, pageSize);
+        }
+
+        ArrayList<Integer> pageUserIds = new ArrayList<>(pageUsers.size());
+        for (User user : pageUsers) {
+            pageUserIds.add(user.getId());
+        }
+
+        Map<Integer, ArrayList<Integer>> pageRelationships = dao.loadRelationshipGraphForUsers(pageUserIds);
+        ArrayList<User> pickerUsers;
+        synchronized (graphLock) {
+            pickerUsers = buildPickerUsers(pageUsers, pageRelationships);
+        }
+
+        int totalFriendships = dao.countFriendships();
+
+        request.setAttribute("pageUsers", pageUsers);
+        request.setAttribute("users", pickerUsers);
+        request.setAttribute("relationships", pageRelationships);
+        request.setAttribute("totalUsers", totalUsers);
+        request.setAttribute("totalFriendships", totalFriendships);
+        request.setAttribute("degreeSum", totalFriendships * 2L);
+        request.setAttribute("currentPage", page);
+        request.setAttribute("pageSize", pageSize);
+        request.setAttribute("totalPages", totalPages);
+        request.setAttribute("pageStart", totalUsers == 0 ? 0 : ((page - 1) * pageSize) + 1);
+        request.setAttribute("pageEnd", totalUsers == 0 ? 0 : Math.min(page * pageSize, totalUsers));
+    }
+
+    /**
+     * Populates the selected user context.
+     *
+     * <p>
+     * When {@code includeSelectedRelationships} is true, the request receives a
+     * single-entry {@code relationships} map containing only the selected user's
+     * direct friends. That is enough for the user page. The admin page
+     * call {@link #populateGraphSnapshot(HttpServletRequest)} instead.
+     * </p>
+     */
+    private void populateSelectedUser(
+            HttpServletRequest request,
+            String rawUserId,
+            boolean includeSelectedRelationships) {
+
         if (!Validator.isValidId(rawUserId)) {
             return;
         }
+
         int userId = Integer.parseInt(rawUserId.trim());
-
-        synchronized (graphLock) {
-            if (graph.searchUserById(userId) == null) {
-                request.setAttribute("error", "User [" + userId + "] does not exist.");
-                return;
-            }
-
-            ArrayList<SuggestedFriend> suggestions = graph.suggestFriends(userId, DEFAULT_TOP_K);
-
-            Map<Integer, ArrayList<Integer>> mutualsBySuggested = new LinkedHashMap<>();
-            for (SuggestedFriend suggestion : suggestions) {
-                ArrayList<Integer> mutualIds = new ArrayList<>();
-                for (User mutual : graph.getMutualFriends(userId, suggestion.getSuggestedId())) {
-                    mutualIds.add(mutual.getId());
-                }
-                mutualsBySuggested.put(suggestion.getSuggestedId(), mutualIds);
-            }
-
-            request.setAttribute("selectedUserId", userId);
-            request.setAttribute("suggestions", suggestions);
-            request.setAttribute("mutualsBySuggested", mutualsBySuggested);
+        if (!dao.isUserExists(userId)) {
+            request.setAttribute("error", "User [" + userId + "] does not exist.");
+            return;
         }
+
+        SocialGraphDAO.SuggestionBundle suggestionBundle = dao.loadSuggestionBundle(userId, DEFAULT_TOP_K);
+        if (includeSelectedRelationships) {
+            Map<Integer, ArrayList<Integer>> selectedRelationships = new LinkedHashMap<>();
+            selectedRelationships.put(userId, suggestionBundle.getDirectFriendIds());
+            request.setAttribute("relationships", selectedRelationships);
+        }
+
+        request.setAttribute("selectedUserId", userId);
+        request.setAttribute("suggestions", suggestionBundle.getSuggestions());
+        request.setAttribute("mutualsBySuggested", suggestionBundle.getMutualsBySuggested());
     }
 
     // ==================================================================
-    //  Helpers
+    // Helpers
     // ==================================================================
+
+    private int parsePositiveInt(String rawValue, int defaultValue) {
+        if (rawValue == null) {
+            return defaultValue;
+        }
+
+        String trimmed = rawValue.trim();
+        if (trimmed.isEmpty()) {
+            return defaultValue;
+        }
+
+        try {
+            int parsed = Integer.parseInt(trimmed);
+            return parsed > 0 ? parsed : defaultValue;
+        } catch (NumberFormatException exception) {
+            return defaultValue;
+        }
+    }
+
+    private ArrayList<User> buildPickerUsers(
+            ArrayList<User> pageUsers,
+            Map<Integer, ArrayList<Integer>> pageRelationships) {
+
+        LinkedHashMap<Integer, User> pickerUsers = new LinkedHashMap<>();
+        if (pageUsers != null) {
+            for (User user : pageUsers) {
+                if (user != null) {
+                    pickerUsers.put(user.getId(), user);
+                }
+            }
+        }
+
+        if (pageRelationships != null) {
+            for (ArrayList<Integer> friendIds : pageRelationships.values()) {
+                if (friendIds == null) {
+                    continue;
+                }
+
+                for (int friendId : friendIds) {
+                    if (pickerUsers.containsKey(friendId)) {
+                        continue;
+                    }
+
+                    User friend = graph.searchUserById(friendId);
+                    if (friend != null) {
+                        pickerUsers.put(friendId, friend);
+                    }
+                }
+            }
+        }
+
+        return new ArrayList<>(pickerUsers.values());
+    }
 
     private void reloadGraph() {
         Graph reloaded = dao.loadGraphFromDatabase();
@@ -349,7 +434,6 @@ public class MainController extends HttpServlet {
         request.getRequestDispatcher("/WEB-INF/views/" + view + ".jsp").forward(request, response);
     }
 
-    /** Moves a one-shot flash message/error from the session onto the request, then clears it. */
     private void moveFlashToRequest(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
         if (session == null) {

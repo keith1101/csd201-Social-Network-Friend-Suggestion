@@ -7,3 +7,4 @@ diagram
 resource/
 bug.png
 nbproject/private/private.xml
+*.sql
