@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
@@ -31,7 +30,7 @@ import utils.Validator;
  * entire edge set into RAM.
  * </p>
  */
-@WebServlet(name = "MainController", urlPatterns = { "/social-network" })
+@WebServlet(name = "MainController", urlPatterns = {"/social-network"})
 public class MainController extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
@@ -49,11 +48,9 @@ public class MainController extends HttpServlet {
     @Override
     public void init() throws ServletException {
         this.dao = new SocialGraphDAO();
-
-        Graph loaded = dao.loadGraphFromDatabase();
-        this.graph = (loaded != null) ? loaded : new Graph();
-        LOGGER.log(Level.INFO, "MainController initialised with {0} users.",
-                graph.getUserCount());
+        synchronized (graphLock) {
+            reloadGraph();
+        }
     }
 
     // ------------------------------------------------------------------
@@ -77,7 +74,8 @@ public class MainController extends HttpServlet {
                 break;
 
             case "dashboard":
-                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Dashboard is disabled.");
+                populateDashboardSnapshot(request, request.getParameter("userId"));
+                forward(request, response, "dashboard");
                 break;
             case "user":
                 populateUsersSnapshot(request);
@@ -133,7 +131,6 @@ public class MainController extends HttpServlet {
     // ==================================================================
     // Mutation handlers - DB write first, then refresh the cache if needed.
     // ==================================================================
-
     private void registerUser(HttpServletRequest request) {
         String rawId = request.getParameter("userId");
         String rawName = request.getParameter("fullName");
@@ -277,31 +274,35 @@ public class MainController extends HttpServlet {
     // ==================================================================
     // Data-contract builders - request attributes, no JSON.
     // ==================================================================
-
     private void populateUsersSnapshot(HttpServletRequest request) {
         synchronized (graphLock) {
-            request.setAttribute("users", graph.getVertices());
+            if (graph != null) {
+                request.setAttribute("users", graph.getVertices());
+            }
         }
     }
 
     /**
-     * Sets a paginated user browser and page-scoped friendships for admin views.
+     * Sets a paginated user browser and page-scoped friendships for admin
+     * views.
      */
     private void populateGraphSnapshot(HttpServletRequest request) {
         int page = parsePositiveInt(request.getParameter("page"), 1);
         int pageSize = parsePositiveInt(request.getParameter("pageSize"), DEFAULT_ADMIN_PAGE_SIZE);
         pageSize = Math.max(1, Math.min(pageSize, MAX_ADMIN_PAGE_SIZE));
 
-        ArrayList<User> pageUsers;
-        int totalUsers;
-        int totalPages;
+        ArrayList<User> pageUsers = dao.loadUsersPage((page - 1) * pageSize, pageSize);
+        int totalUsers = dao.countUsers();
+        int totalPages = 0;
         synchronized (graphLock) {
-            totalUsers = graph.getUserCount();
-            totalPages = Math.max(1, graph.getUserPageCount(pageSize));
-            if (page > totalPages) {
-                page = totalPages;
+            if (graph != null) {
+                totalUsers = graph.getUserCount();
+                totalPages = Math.max(1, graph.getUserPageCount(pageSize));
+                if (page > totalPages) {
+                    page = totalPages;
+                }
+                pageUsers = graph.getUsersPage(page, pageSize);
             }
-            pageUsers = graph.getUsersPage(page, pageSize);
         }
 
         ArrayList<Integer> pageUserIds = new ArrayList<>(pageUsers.size());
@@ -330,13 +331,45 @@ public class MainController extends HttpServlet {
         request.setAttribute("pageEnd", totalUsers == 0 ? 0 : Math.min(page * pageSize, totalUsers));
     }
 
+    private void populateDashboardSnapshot(HttpServletRequest request, String rawUserId) {
+        if (!Validator.isValidId(rawUserId)) {
+            return;
+        }
+
+        int userId = Integer.parseInt(rawUserId.trim());
+        if (!dao.isUserExists(userId)) {
+            request.setAttribute("error", "User [" + userId + "] does not exist.");
+            return;
+        }
+
+        SocialGraphDAO.SuggestionBundle suggestionBundle = dao.loadSuggestionBundle(userId, DEFAULT_TOP_K);
+
+        ArrayList<Integer> dashboardUserIds = new ArrayList<>();
+        dashboardUserIds.add(userId);
+        dashboardUserIds.addAll(suggestionBundle.getDirectFriendIds());
+        for (SuggestedFriend suggestion : suggestionBundle.getSuggestions()) {
+            dashboardUserIds.add(suggestion.getSuggestedId());
+        }
+        for (ArrayList<Integer> mutualIds : suggestionBundle.getMutualsBySuggested().values()) {
+            dashboardUserIds.addAll(mutualIds);
+        }
+
+        Map<Integer, ArrayList<Integer>> selectedRelationships = new LinkedHashMap<>();
+        selectedRelationships.put(userId, suggestionBundle.getDirectFriendIds());
+
+        request.setAttribute("users", dao.loadUsersByIds(dashboardUserIds));
+        request.setAttribute("relationships", selectedRelationships);
+        request.setAttribute("selectedUserId", userId);
+        request.setAttribute("suggestions", suggestionBundle.getSuggestions());
+        request.setAttribute("mutualsBySuggested", suggestionBundle.getMutualsBySuggested());
+    }
     /**
      * Populates the selected user context.
      *
      * <p>
      * When {@code includeSelectedRelationships} is true, the request receives a
-     * single-entry {@code relationships} map containing only the selected user's
-     * direct friends. That is enough for the user page. The admin page
+     * single-entry {@code relationships} map containing only the selected
+     * user's direct friends. That is enough for the user page. The admin page
      * call {@link #populateGraphSnapshot(HttpServletRequest)} instead.
      * </p>
      */
@@ -370,7 +403,6 @@ public class MainController extends HttpServlet {
     // ==================================================================
     // Helpers
     // ==================================================================
-
     private int parsePositiveInt(String rawValue, int defaultValue) {
         if (rawValue == null) {
             return defaultValue;
@@ -413,7 +445,10 @@ public class MainController extends HttpServlet {
                         continue;
                     }
 
-                    User friend = graph.searchUserById(friendId);
+                    User friend = null;
+                    if (graph != null) {
+                        friend = graph.searchUserById(friendId);
+                    }
                     if (friend != null) {
                         pickerUsers.put(friendId, friend);
                     }

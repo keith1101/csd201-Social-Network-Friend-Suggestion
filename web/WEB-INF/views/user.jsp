@@ -30,6 +30,7 @@
         <form method="get" action="${ctx}/social-network" class="pick-form" id="viewingAsForm">
             <input type="hidden" name="action" value="user">
             <input type="hidden" name="userId" id="viewingAsUserId" value="${empty selectedUserId ? '' : selectedUserId}">
+            <!--<input type="hidden" name="userId" id="viewingAsUserId" value="">-->
             <label>Viewing as</label>
             <div class="search-wrapper">
                 <input type="text" id="viewingAsSearch" class="search-input" placeholder="Search for a profile..." autocomplete="off">
