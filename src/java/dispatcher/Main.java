@@ -4,6 +4,7 @@ import controller.SocialNetworkController;
 import view.ConsoleView;
 
 public class Main {
+
     private static final SocialNetworkController CONTROLLER = new SocialNetworkController();
 
     private Main() {
@@ -46,6 +47,20 @@ public class Main {
                 case "7":
                     CONTROLLER.removeUser(ConsoleView.promptUserId("Enter user ID"));
                     break;
+                // THÊM ĐOẠN CODE NÀY DÀNH RIÊNG CHO LÚC DEMO BENCHMARK
+                case "9":
+                    ConsoleView.displayMessage("\n[DEV ONLY] INITIATING PERFORMANCE BENCHMARK...");
+                    int testUserId = Integer.parseInt(ConsoleView.promptUserId("Enter target User ID for benchmark"));
+
+                    // Khởi tạo đối tượng tác vụ (Callback pattern)
+                    utils.PerformanceProfiler.AlgorithmTask maxHeapTask = () -> {
+                        // Gọi thẳng hàm gợi ý kết bạn của DAO để kích hoạt thuật toán
+                        CONTROLLER.suggestMutualFriends(testUserId);
+                    };
+
+                    // Chạy bộ đo lường (Đã tích hợp Warm-up 100 vòng & System.gc())
+                    utils.PerformanceProfiler.measureExecutionTime(maxHeapTask, "Max-Heap Top-K Bounded BFS");
+                    break;
                 case "0":
                     running = false;
                     ConsoleView.displayMessage("Goodbye.");
@@ -57,5 +72,3 @@ public class Main {
         }
     }
 }
-
-
