@@ -19,7 +19,13 @@ public class SocialNetworkController {
 
     public SocialNetworkController() {
         this.socialGraphDAO = new SocialGraphDAO();
-        initializeGraph();
+    }
+
+    private Graph requireGraph() {
+        if (friendGraph == null) {
+            initializeGraph();
+        }
+        return friendGraph;
     }
 
     public void initializeGraph() {
@@ -43,7 +49,9 @@ public class SocialNetworkController {
         }
 
         int userId = Integer.parseInt(rawId.trim());
-        if (friendGraph.searchUserById(userId) != null || socialGraphDAO.isUserExists(userId)) {
+        Graph graph = requireGraph();
+
+        if (socialGraphDAO.isUserExists(userId)) {
             ConsoleView.displayMessage("User ID already exists.");
             return;
         }
@@ -54,10 +62,9 @@ public class SocialNetworkController {
             return;
         }
 
-        boolean addedToGraph = friendGraph.addUser(user);
-        if (!addedToGraph) {
-            socialGraphDAO.deleteUser(userId);
-            ConsoleView.displayMessage("Failed to add user to the social graph.");
+        if (!graph.addUser(user)) {
+            initializeGraph();
+            ConsoleView.displayMessage("User registered in the database; graph cache refreshed.");
             return;
         }
 
@@ -74,8 +81,12 @@ public class SocialNetworkController {
     }
 
     public void removeUser(String id) {
-        User user = friendGraph.searchUserById(Integer.parseInt(id));
-        removeUser(user);
+        if (!Validator.isValidId(id)) {
+            ConsoleView.displayMessage("Invalid user ID.");
+            return;
+        }
+
+        removeUser(new User(Integer.parseInt(id.trim()), null));
     }
 
     public void removeUser(User user) {
@@ -84,13 +95,24 @@ public class SocialNetworkController {
             return;
         }
 
-        boolean removeUserFromGraph = friendGraph.removeUser(user.getId());
-        if (removeUserFromGraph) {
-            socialGraphDAO.deleteUser(user.getId());
-            ConsoleView.displayMessage("Delete user successfully!");
-        } else {
-            ConsoleView.displayMessage("Cannot delete user!");
+        Graph graph = requireGraph();
+        if (!socialGraphDAO.isUserExists(user.getId())) {
+            ConsoleView.displayMessage("User [" + user.getId() + "] does not exist.");
+            return;
         }
+
+        if (!socialGraphDAO.deleteUser(user.getId())) {
+            ConsoleView.displayMessage("Failed to remove user from the database.");
+            return;
+        }
+
+        if (!graph.removeUser(user.getId())) {
+            initializeGraph();
+            ConsoleView.displayMessage("User removed from the database; graph cache refreshed.");
+            return;
+        }
+
+        ConsoleView.displayMessage("Delete user successfully!");
     }
 
     public void makeFriend(String rawId1, String rawId2) {
@@ -109,13 +131,13 @@ public class SocialNetworkController {
             return;
         }
 
-        if (friendGraph.searchUserById(id1) == null || friendGraph.searchUserById(id2) == null) {
+        Graph graph = requireGraph();
+        if (!socialGraphDAO.isUserExists(id1) || !socialGraphDAO.isUserExists(id2)) {
             ConsoleView.displayMessage("Both users must exist before creating a friendship.");
             return;
         }
 
-        if (friendGraph.isFriendshipExists(id1, id2)
-                || socialGraphDAO.isFriendshipExists(id1, id2)) {
+        if (socialGraphDAO.isFriendshipExists(id1, id2)) {
             ConsoleView.displayMessage("The users are already friends.");
             return;
         }
@@ -126,10 +148,9 @@ public class SocialNetworkController {
             return;
         }
 
-        boolean addedToGraph = friendGraph.addFriendship(id1, id2);
-        if (!addedToGraph) {
-            socialGraphDAO.deleteFriendship(id1, id2);
-            ConsoleView.displayMessage("Failed to add friendship to the social graph.");
+        if (!graph.addFriendship(id1, id2)) {
+            initializeGraph();
+            ConsoleView.displayMessage("Friendship saved in the database; graph cache refreshed.");
             return;
         }
 
@@ -148,8 +169,13 @@ public class SocialNetworkController {
     }
 
     public void unFriend(int id1, int id2) {
-        if (!Validator.isValidFriendship(id1, id2)
-                || !friendGraph.isFriendshipExists(id1, id2)) {
+        if (!Validator.isValidFriendship(id1, id2)) {
+            ConsoleView.displayMessage("Invalid friendship.");
+            return;
+        }
+
+        Graph graph = requireGraph();
+        if (!socialGraphDAO.isFriendshipExists(id1, id2)) {
             ConsoleView.displayMessage("Friendship does not exist.");
             return;
         }
@@ -159,10 +185,9 @@ public class SocialNetworkController {
             return;
         }
 
-        if (!friendGraph.removeFriendship(id1, id2)) {
+        if (!graph.removeFriendship(id1, id2)) {
             initializeGraph();
-            ConsoleView.displayMessage(
-                    "Friendship was removed from the database; graph data was reloaded.");
+            ConsoleView.displayMessage("Friendship removed from the database; graph cache refreshed.");
             return;
         }
 
@@ -179,23 +204,23 @@ public class SocialNetworkController {
     }
 
     public void suggestMutualFriends(int userId) {
-        if (friendGraph.searchUserById(userId) == null) {
+        if (!socialGraphDAO.isUserExists(userId)) {
             ConsoleView.displayMessage("User does not exist.");
             return;
         }
 
         ArrayList<SuggestedFriend> suggestions =
-                friendGraph.suggestFriends(userId, DEFAULT_TOP_K);
+                socialGraphDAO.loadSuggestedFriends(userId, DEFAULT_TOP_K);
         ConsoleView.displaySuggestedFriends(suggestions);
     }
 
     public void showUsers() {
-        ConsoleView.displayUserList(new ArrayList<>(friendGraph.getVertices()));
+        ConsoleView.displayUserList(requireGraph().getVertices());
     }
 
     public void showRelationshipGraph() {
         ConsoleView.displayRelationshipGraph(
-                new ArrayList<>(friendGraph.getVertices()),
-                friendGraph.getRelationshipGraph());
+                requireGraph().getVertices(),
+                socialGraphDAO.loadRelationshipGraph());
     }
 }

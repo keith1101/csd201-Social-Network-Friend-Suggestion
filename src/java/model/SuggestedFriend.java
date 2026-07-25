@@ -19,6 +19,10 @@ public class SuggestedFriend implements Comparable<SuggestedFriend> {
 
     @Override
     public int compareTo(SuggestedFriend other) {
-        return Integer.compare(other.mutualFriendsCount, this.mutualFriendsCount);
+        int countCompare = Integer.compare(other.mutualFriendsCount, this.mutualFriendsCount);
+        if (countCompare != 0) {
+            return countCompare;
+        }
+        return Integer.compare(this.suggestedUserId, other.suggestedUserId);
     }
 }

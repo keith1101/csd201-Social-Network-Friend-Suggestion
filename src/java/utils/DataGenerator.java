@@ -9,12 +9,35 @@ import java.util.Set;
 
 public class DataGenerator {
 
+    private static final int DEFAULT_TOTAL_USERS = 1000;
+    private static final int DEFAULT_TOTAL_EDGES = 10000;
+    private static final String DEFAULT_OUTPUT_FILE = "data_1000_10000.sql";
+
     public static void main(String[] args) {
-        int totalUsers = 2000;
-        int totalEdges = 10000;
-        String filePath = "data_2000.sql"; // Note that the file extension has been changed to .sql
+        int totalUsers = DEFAULT_TOTAL_USERS;
+        int totalEdges = DEFAULT_TOTAL_EDGES;
+        String filePath = DEFAULT_OUTPUT_FILE;
+
+        if (args.length > 0) {
+            totalUsers = parsePositiveInt(args[0], totalUsers);
+        }
+        if (args.length > 1) {
+            totalEdges = parsePositiveInt(args[1], totalEdges);
+        }
+        if (args.length > 2 && !args[2].trim().isEmpty()) {
+            filePath = args[2].trim();
+        }
 
         generateSQLData(totalUsers, totalEdges, filePath);
+    }
+
+    private static int parsePositiveInt(String rawValue, int defaultValue) {
+        try {
+            int parsed = Integer.parseInt(rawValue.trim());
+            return parsed > 0 ? parsed : defaultValue;
+        } catch (Exception exception) {
+            return defaultValue;
+        }
     }
 
     public static void generateSQLData(int totalUsers, int totalEdges, String filePath) {
@@ -45,8 +68,9 @@ public class DataGenerator {
                 int userA = random.nextInt(totalUsers) + 1;
                 int userB = random.nextInt(totalUsers) + 1;
 
-                if (userA == userB)
+                if (userA == userB) {
                     continue;
+                }
 
                 int minId = Math.min(userA, userB);
                 int maxId = Math.max(userA, userB);

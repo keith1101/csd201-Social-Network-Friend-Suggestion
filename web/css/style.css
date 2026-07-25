@@ -1,5 +1,5 @@
 /* ============================================================
-   BookFace — Social Network Friend-Suggestion
+   BookFace - Social Network Friend-Suggestion
    Flat Facebook-inspired theme (no gradients).
    Shared across Find Friends / Dashboard / Admin.
    ============================================================ */
@@ -159,6 +159,34 @@ input:focus, select:focus {
 .btn.ghost     { background: var(--grey-btn); color: var(--text); }
 .btn.ghost:hover { background: var(--grey-btn-h); }
 .btn.slim { width: auto; margin-top: 0; padding: 7px 14px; font-size: 13px; }
+.btn.disabled,
+.pager-controls .btn.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+.pager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+.pager-meta {
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+}
+.pager-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.pager-controls .btn {
+    width: auto;
+    margin-top: 0;
+}
 
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 /* Let two searchable pickers sit side-by-side in a .row without overflowing
@@ -176,7 +204,7 @@ input:focus, select:focus {
 .banner.ok    { background: #e6f4ea; border-color: #b7e0c0; color: #1e7d34; }
 .banner.error { background: #fdeaea; border-color: #f6c5c5; color: #c0292e; }
 .banner::before { margin-right: 8px; font-weight: 800; }
-.banner.ok::before    { content: "✓"; }
+.banner.ok::before    { content: "\2713"; }
 .banner.error::before { content: "!"; }
 
 /* ---------- Tables ---------- */

@@ -25,17 +25,17 @@
             <input type="hidden" name="action" value="dashboard">
             <input type="hidden" name="userId" id="selectedUserId" value="${empty selectedUserId ? '' : selectedUserId}">
             <div class="search-wrapper">
-                <input type="text" id="focusUserSearch" class="search-input" placeholder="Search for focus user…" autocomplete="off">
+                <input type="text" id="focusUserSearch" class="search-input" placeholder="Search for focus user..." autocomplete="off">
                 <ul class="search-dropdown" id="focusUserDropdown" style="display: none;"></ul>
             </div>
         </form>
     </div>
 
     <div class="stats" id="metrics">
-        <div class="stat a"><div class="n" id="m-nodes">–</div><div class="l">Nodes</div></div>
-        <div class="stat d"><div class="n" id="m-edges">–</div><div class="l">Edges</div></div>
-        <div class="stat b"><div class="n" id="m-deg">–</div><div class="l">Avg degree</div></div>
-        <div class="stat c"><div class="n" id="m-density">–</div><div class="l">Density</div></div>
+        <div class="stat a"><div class="n" id="m-nodes">-</div><div class="l">Nodes</div></div>
+        <div class="stat d"><div class="n" id="m-edges">-</div><div class="l">Edges</div></div>
+        <div class="stat b"><div class="n" id="m-deg">-</div><div class="l">Avg degree</div></div>
+        <div class="stat c"><div class="n" id="m-density">-</div><div class="l">Density</div></div>
     </div>
 
     <div class="dash-grid">
@@ -70,20 +70,20 @@
                 <h2>How it works</h2>
                 <p><strong>Suggestions = non-friends ranked by number of mutual friends.</strong></p>
                 <ol class="steps">
-                    <li>Graph stored as an <b>adjacency list</b> (each user → neighbour IDs).</li>
+                    <li>Graph stored as an <b>adjacency list</b> (each user -> neighbour IDs).</li>
                     <li>For every non-friend candidate, intersect the two friend sets with a
-                        <b>HashSet</b> → mutual count in <code>O(deg)</code>.</li>
+                        <b>HashSet</b> -> mutual count in <code>O(deg)</code>.</li>
                     <li>Candidates pushed into a <b>max-heap</b>; the top-K are extracted as the
                         ranked suggestions.</li>
                 </ol>
-                <p class="cx">Complexity: <code>O(V · deg + K·log V)</code> per query.</p>
+                <p class="cx">Complexity: <code>O(V * deg + K * log V)</code> per query.</p>
             </div>
         </aside>
     </div>
 </div>
 
 <%-- ============================================================
-     Data contract → inline JS object (no JSON API, no AJAX).
+     Data contract -> inline JS object (no JSON API, no AJAX).
      The controller's request attributes are emitted here so
      dashboard.js can drive the D3 simulation directly.
      ============================================================ --%>
