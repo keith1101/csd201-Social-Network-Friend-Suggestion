@@ -52,14 +52,19 @@ public class Main {
                     ConsoleView.displayMessage("\n[DEV ONLY] INITIATING PERFORMANCE BENCHMARK...");
                     int testUserId = Integer.parseInt(ConsoleView.promptUserId("Enter target User ID for benchmark"));
 
-                    // Khởi tạo đối tượng tác vụ (Callback pattern)
+                    // Khởi tạo DAO độc lập cho bài test
+                    model.SocialGraphDAO testDao = new model.SocialGraphDAO();
+
+                    // Chạy ngầm thuật toán, không gọi ConsoleView để tránh độ trễ in ấn (I/O latency)
                     utils.PerformanceProfiler.AlgorithmTask maxHeapTask = () -> {
-                        // Gọi thẳng hàm gợi ý kết bạn của DAO để kích hoạt thuật toán
-                        CONTROLLER.suggestMutualFriends(testUserId);
+                        testDao.loadSuggestedFriends(testUserId, 5);
                     };
 
-                    // Chạy bộ đo lường (Đã tích hợp Warm-up 100 vòng & System.gc())
+                    // Gọi Profiler (100 vòng Warm-up sẽ chạy hoàn toàn im lặng)
                     utils.PerformanceProfiler.measureExecutionTime(maxHeapTask, "Max-Heap Top-K Bounded BFS");
+
+                    // Sau khi đo xong, mới in kết quả 1 lần duy nhất ra màn hình cho giảng viên xem
+                    ConsoleView.displaySuggestedFriends(testDao.loadSuggestedFriends(testUserId, 5));
                     break;
                 case "0":
                     running = false;
